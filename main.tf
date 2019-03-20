@@ -45,11 +45,15 @@ data "aws_iam_policy_document" "lambda_assume_role" {
   }
 }
 
-resource "aws_iam_role_policy" "allow_cloudwatch" {
+resource "aws_iam_policy" "allow_cloudwatch" {
   name = "allow-cloudwatch-abi-clerk-lambda"
-  role = "${aws_iam_role.abi_clerk_lambda_iam.id}"
 
   policy = "${data.aws_iam_policy_document.lambda_allow_cloudwatch.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "allow_cloudwatch" {
+  role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
+  policy_arn = "${aws_iam_policy.allow_cloudwatch.arn}"
 }
 
 data "aws_iam_policy_document" "lambda_allow_cloudwatch" {
@@ -69,6 +73,51 @@ data "aws_iam_policy_document" "lambda_allow_cloudwatch" {
   }
 }
 
+resource "aws_iam_policy" "allow_dynamodb" {
+  name = "allow-dynamodb-abi-clerk-lambda"
+
+  policy = "${data.aws_iam_policy_document.lambda_allow_dynamodb.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "allow_dynamodb" {
+  role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
+  policy_arn = "${aws_iam_policy.allow_dynamodb.arn}"
+}
+
+data "aws_iam_policy_document" "lambda_allow_dynamodb" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DescribeTable"
+    ]
+    resources = ["${aws_dynamodb_table.kv_table.arn}"]
+  }
+
+  statement {
+      sid = "2"
+
+      effect = "Allow"
+
+      actions = [
+          "dynamodb:BatchGetItem",
+          "dynamodb:BatchWriteItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem"
+      ]
+      resources = [
+        "${aws_dynamodb_table.kv_table.arn}",
+        "${aws_dynamodb_table.kv_table.arn}/*"
+      ]
+  }
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
@@ -79,6 +128,12 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
   handler          = "index.handler"
   source_code_hash = "${base64sha256(file("abi-clerk-lambda.zip"))}"
   runtime          = "nodejs8.10"
+
+  environment {
+    variables {
+      DDB_TABLE = "${aws_dynamodb_table.kv_table.id}"
+    }
+  }
 }
 
 resource "aws_lambda_permission" "api_gateway_invoke_lambda" {
@@ -158,5 +213,21 @@ resource "aws_route53_record" "example" {
     evaluate_target_health = true
     name                   = "${aws_api_gateway_domain_name.domain.cloudfront_domain_name}"
     zone_id                = "${aws_api_gateway_domain_name.domain.cloudfront_zone_id}"
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# DYNAMODB TABLES
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_dynamodb_table" "kv_table" {
+  name           = "abi-clerk-kv-test"
+  billing_mode   = "PROVISIONED"
+  read_capacity  = 1
+  write_capacity = 1
+  hash_key       = "Key"
+
+  attribute {
+    name = "Key"
+    type = "S"
   }
 }
