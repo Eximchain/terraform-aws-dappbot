@@ -149,7 +149,9 @@ data "aws_iam_policy_document" "lambda_allow_s3" {
       "s3:GetBucketWebsite",
       "s3:DeleteBucketWebsite",
       "s3:GetBucketPolicy",
-      "s3:PutBucketPolicy"
+      "s3:PutBucketPolicy",
+      "s3:GetBucketAcl",
+      "s3:PutBucketAcl"
     ]
     resources = ["${local.s3_bucket_arn_pattern}"]
   }
@@ -162,7 +164,8 @@ data "aws_iam_policy_document" "lambda_allow_s3" {
       actions = [
           "s3:PutObject",
           "s3:GetObject",
-          "s3:DeleteObject"
+          "s3:DeleteObject",
+          "s3:ListObjects"
       ]
       resources = ["${local.s3_bucket_arn_pattern}/*"]
   }
