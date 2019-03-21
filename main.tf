@@ -95,7 +95,7 @@ data "aws_iam_policy_document" "lambda_allow_dynamodb" {
     actions = [
       "dynamodb:DescribeTable"
     ]
-    resources = ["${aws_dynamodb_table.kv_table.arn}"]
+    resources = ["${aws_dynamodb_table.dapp_table.arn}"]
   }
 
   statement {
@@ -112,8 +112,8 @@ data "aws_iam_policy_document" "lambda_allow_dynamodb" {
           "dynamodb:UpdateItem"
       ]
       resources = [
-        "${aws_dynamodb_table.kv_table.arn}",
-        "${aws_dynamodb_table.kv_table.arn}/*"
+        "${aws_dynamodb_table.dapp_table.arn}",
+        "${aws_dynamodb_table.dapp_table.arn}/*"
       ]
   }
 }
@@ -131,7 +131,7 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
 
   environment {
     variables {
-      DDB_TABLE = "${aws_dynamodb_table.kv_table.id}"
+      DDB_TABLE = "${aws_dynamodb_table.dapp_table.id}"
     }
   }
 }
@@ -219,15 +219,15 @@ resource "aws_route53_record" "example" {
 # ---------------------------------------------------------------------------------------------------------------------
 # DYNAMODB TABLES
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_dynamodb_table" "kv_table" {
-  name           = "abi-clerk-kv-test"
+resource "aws_dynamodb_table" "dapp_table" {
+  name           = "abi-clerk-dapps"
   billing_mode   = "PROVISIONED"
   read_capacity  = 1
   write_capacity = 1
-  hash_key       = "Key"
+  hash_key       = "DappName"
 
   attribute {
-    name = "Key"
+    name = "DappName"
     type = "S"
   }
 }
