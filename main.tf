@@ -6,6 +6,10 @@ provider "aws" {
     version = "~> 2.2"
 }
 
+locals {
+    s3_bucket_arn_pattern = "arn:aws:s3:::exim-abi-clerk-*"
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # DATA SOURCES
 # ---------------------------------------------------------------------------------------------------------------------
@@ -115,6 +119,52 @@ data "aws_iam_policy_document" "lambda_allow_dynamodb" {
         "${aws_dynamodb_table.dapp_table.arn}",
         "${aws_dynamodb_table.dapp_table.arn}/*"
       ]
+  }
+}
+
+resource "aws_iam_policy" "allow_s3" {
+  name = "allow-s3-abi-clerk-lambda"
+
+  policy = "${data.aws_iam_policy_document.lambda_allow_s3.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "allow_s3" {
+  role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
+  policy_arn = "${aws_iam_policy.allow_s3.arn}"
+}
+
+data "aws_iam_policy_document" "lambda_allow_s3" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "s3:ListBucket",
+      "s3:CreateBucket",
+      "s3:DeleteBucket",
+      "s3:PutBucketWebsite",
+      "s3:GetBucketWebsite",
+      "s3:DeleteBucketWebsite",
+      "s3:GetBucketPolicy",
+      "s3:PutBucketPolicy"
+    ]
+    resources = ["${local.s3_bucket_arn_pattern}"]
+  }
+
+  statement {
+      sid = "2"
+
+      effect = "Allow"
+
+      actions = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject"
+      ]
+      resources = ["${local.s3_bucket_arn_pattern}/*"]
   }
 }
 
