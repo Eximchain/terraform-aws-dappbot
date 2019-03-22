@@ -8,6 +8,7 @@ provider "aws" {
 
 locals {
     s3_bucket_arn_pattern = "arn:aws:s3:::exim-abi-clerk-*"
+    created_dns_root = ".test-subdomain.${var.root_domain}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -201,6 +202,32 @@ data "aws_iam_policy_document" "lambda_allow_cloudfront" {
   }
 }
 
+resource "aws_iam_policy" "allow_route53" {
+  name = "allow-route53-abi-clerk-lambda"
+
+  policy = "${data.aws_iam_policy_document.lambda_allow_route53.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "allow_route53" {
+  role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
+  policy_arn = "${aws_iam_policy.allow_route53.arn}"
+}
+
+data "aws_iam_policy_document" "lambda_allow_route53" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "route53:ChangeResourceRecordSets"
+    ]
+    resources = ["*"]
+  }
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
@@ -215,7 +242,9 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
 
   environment {
     variables {
-      DDB_TABLE = "${aws_dynamodb_table.dapp_table.id}"
+      DDB_TABLE          = "${aws_dynamodb_table.dapp_table.id}"
+      R53_HOSTED_ZONE_ID = "${data.aws_route53_zone.hosted_zone.zone_id}"
+      DNS_ROOT           = "${local.created_dns_root}"
     }
   }
 }
