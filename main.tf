@@ -50,6 +50,9 @@ data "aws_iam_policy_document" "lambda_assume_role" {
   }
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# LAMBDA IAM CLOUDWATCH ACCESS
+# ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "allow_cloudwatch" {
   name = "allow-cloudwatch-abi-clerk-lambda"
 
@@ -78,6 +81,9 @@ data "aws_iam_policy_document" "lambda_allow_cloudwatch" {
   }
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# LAMBDA IAM DYNAMODB ACCESS
+# ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "allow_dynamodb" {
   name = "allow-dynamodb-abi-clerk-lambda"
 
@@ -123,6 +129,9 @@ data "aws_iam_policy_document" "lambda_allow_dynamodb" {
   }
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# LAMBDA IAM S3 ACCESS
+# ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "allow_s3" {
   name = "allow-s3-abi-clerk-lambda"
 
@@ -174,6 +183,9 @@ data "aws_iam_policy_document" "lambda_allow_s3" {
   }
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# LAMBDA IAM CLOUDFRONT ACCESS
+# ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "allow_cloudfront" {
   name = "allow-cloudfront-abi-clerk-lambda"
 
@@ -202,6 +214,9 @@ data "aws_iam_policy_document" "lambda_allow_cloudfront" {
   }
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# LAMBDA IAM ROUTE53 ACCESS
+# ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "allow_route53" {
   name = "allow-route53-abi-clerk-lambda"
 
