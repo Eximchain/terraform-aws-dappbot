@@ -151,7 +151,9 @@ data "aws_iam_policy_document" "lambda_allow_s3" {
       "s3:GetBucketPolicy",
       "s3:PutBucketPolicy",
       "s3:GetBucketAcl",
-      "s3:PutBucketAcl"
+      "s3:PutBucketAcl",
+      "s3:GetObjectAcl",
+      "s3:PutObjectAcl"
     ]
     resources = ["${local.s3_bucket_arn_pattern}"]
   }
@@ -171,6 +173,34 @@ data "aws_iam_policy_document" "lambda_allow_s3" {
   }
 }
 
+resource "aws_iam_policy" "allow_cloudfront" {
+  name = "allow-cloudfront-abi-clerk-lambda"
+
+  policy = "${data.aws_iam_policy_document.lambda_allow_cloudfront.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "allow_cloudfront" {
+  role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
+  policy_arn = "${aws_iam_policy.allow_cloudfront.arn}"
+}
+
+data "aws_iam_policy_document" "lambda_allow_cloudfront" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "cloudfront:CreateDistribution",
+      "cloudfront:GetDistributionConfig",
+      "cloudfront:UpdateDistribution"
+    ]
+    resources = ["*"]
+  }
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
@@ -181,6 +211,7 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
   handler          = "index.handler"
   source_code_hash = "${base64sha256(file("abi-clerk-lambda.zip"))}"
   runtime          = "nodejs8.10"
+  timeout          = 900
 
   environment {
     variables {
