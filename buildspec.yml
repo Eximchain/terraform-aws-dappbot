@@ -1,0 +1,21 @@
+version: 0.2
+phases:
+ install:
+   commands:
+     - echo "install step, installing dappsmith & create-react-app"
+     - npm i -g @eximchain/dappsmith create-react-app
+ pre_build:
+   commands:
+     - echo "pre_build step"
+ build:
+   commands:
+    - cd $CODEBUILD_SRC_DIR_dappseed
+    - unzip dappseed.zip
+    - dappsmith --config config.json --dirName dapp
+    - cd dapp
+    - npm install
+    - npm run build
+artifacts:
+  name: build
+  files:
+    - dapp/build/**/*

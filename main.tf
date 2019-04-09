@@ -244,6 +244,28 @@ data "aws_iam_policy_document" "lambda_allow_route53" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# SHARED S3 BUCKETS & KEY
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_s3_bucket" "artifact_bucket" {
+  bucket = "abi-clerk-artifacts"
+  acl    = "private"
+}
+
+resource "aws_s3_bucket" "dappseed_bucket" {
+  bucket = "abi-clerk-dappseeds"
+  acl    = "private"
+
+  versioning {
+    enabled = true
+  }
+}
+
+resource "aws_kms_key" "abi_clerk_kms" {
+  description = "KMS key for abi-clerk's artifact and dappseed buckets."
+  deletion_windows_in_days = 7
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_lambda_function" "abi_clerk_lambda" {
@@ -260,6 +282,11 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
       DDB_TABLE          = "${aws_dynamodb_table.dapp_table.id}"
       R53_HOSTED_ZONE_ID = "${data.aws_route53_zone.hosted_zone.zone_id}"
       DNS_ROOT           = "${local.created_dns_root}"
+      CODEBUILD_ID       = "${aws_codebuild_project.abi_clerk_builder.id}",
+      PIPELINE_ROLE_ARN  = "an-arn",
+      KMS_KEY_NAME       = "${aws_kms_key.abi_clerk_kms.arn}",
+      ARTIFACT_BUCKET    = "${aws_s3_bucket.artifact_bucket.id}",
+      DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}"
     }
   }
 }
@@ -272,6 +299,35 @@ resource "aws_lambda_permission" "api_gateway_invoke_lambda" {
 
   # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
   source_arn = "${aws_api_gateway_rest_api.abi_clerk_api.execution_arn}/*/*/*"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# CODEBUILD PROJECT
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_codebuild_project" "abi_clerk_builder" {
+  name = "abi_clerk_builder"
+  build_timeout = 10
+  service_role = "TODO: make service role"
+
+  environment {
+    type = "LINUX_CONTAINER"
+    compute_type = "BUILD_GENERAL1_MEDIUM"
+    image = "aws/codebuild/nodejs:10.14.1-1.7.0"
+  }
+
+  artifacts {
+    type = "CODEPIPELINE"
+    encryption_disabled = true
+  }
+
+  source {
+    type = "CODEPIPELINE"
+    buildspec = "${data.local_file.buildspec.content}"
+  }
+}
+
+data "local_file" "buildspec" {
+  filename = "${path.module}/buildspec.yml"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
