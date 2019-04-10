@@ -9,7 +9,7 @@ phases:
      - echo "pre_build step"
  build:
    commands:
-    - cd $CODEBUILD_SRC_DIR_dappseed
+    - cd $CODEBUILD_SRC_DIR_DAPPSEED
     - unzip dappseed.zip
     - dappsmith --config config.json --dirName dapp
     - cd dapp
