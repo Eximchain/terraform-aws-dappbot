@@ -22,7 +22,7 @@
     {
       "type": "shell",
       "inline": [
-        "npm i -g npm-login-cli",
+        "npm i -g npm-cli-login",
         "npm-cli-login -u {{user `npm_user`}} -p {{user `npm_pass`}} -e {{user `npm_email`}}",
         "npm i -g @eximchain/dappsmith create-react-app"
       ]

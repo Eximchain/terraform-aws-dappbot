@@ -12,26 +12,17 @@ phases:
  build:
    commands:
     - echo "--- BEGINNING BUILD ---"
-    - cd $CODEBUILD_SRC_DIR_DAPPSEED
-    - echo "Dappseed's dir & contents are:"
-    - pwd | echo
-    - ls -a | echo
-    - echo "Unzipping dappseed..."
-    - unzip dappseed.zip
-    - echo "Unzip successful.  Directory contents are now:"
-    - ls -a | echo
-    - echo "Beginning dappsmith generation..."
-    - dappsmith --config config.json --dirName dapp
+    - dappsmith --config config.json --dir dapp
+    - pwd
+    - ls -a
     - echo "Initial generation successful.  Entering and installing..."
     - cd dapp
     - npm install
     - echo "Installation complete.  Building..."
     - npm run build
     - echo "Build complete.  Zipping..."
-    - zip -r build.zip build/
-    - echo "Zip complete, following output should include build.zip:"
-    - ls -a | echo
+    - zip -r ../build.zip build/
 artifacts:
   name: BUILD
   files:
-    - $CODEBUILD_SRC_DIR_DAPPSEED/dapp/build.zip
+    - build.zip
