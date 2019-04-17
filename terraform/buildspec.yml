@@ -6,7 +6,7 @@ phases:
      - echo "  - Installing npm-login-cli..."
      - npm i -g npm-login-cli
      - echo "  - npm-login-cli installed.  Logging in..."
-     - npm-cli-login -u $NPM_USER -p $NPM_PASS -e $NPM_EMAIL
+     - npm-login-cli -u $NPM_USER -p $NPM_PASS -e $NPM_EMAIL
      - echo "  - Login successful.  Installing dappsmith & create-react-app..."
      - npm i -g @eximchain/dappsmith create-react-app
  build:
