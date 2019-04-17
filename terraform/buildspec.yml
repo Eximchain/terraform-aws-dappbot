@@ -2,20 +2,36 @@ version: 0.2
 phases:
  install:
    commands:
-     - echo "install step, installing dappsmith & create-react-app"
+     - echo "--- BEGINNING INSTALLATION ---"
+     - echo "  - Installing npm-login-cli..."
+     - npm i -g npm-login-cli
+     - echo "  - npm-login-cli installed.  Logging in..."
+     - npm-cli-login -u $NPM_USER -p $NPM_PASS -e $NPM_EMAIL
+     - echo "  - Login successful.  Installing dappsmith & create-react-app..."
      - npm i -g @eximchain/dappsmith create-react-app
- pre_build:
-   commands:
-     - echo "pre_build step"
  build:
    commands:
+    - echo "--- BEGINNING BUILD ---"
     - cd $CODEBUILD_SRC_DIR_DAPPSEED
+    - echo "Dappseed's dir & contents are:"
+    - pwd | echo
+    - ls -a | echo
+    - echo "Unzipping dappseed..."
     - unzip dappseed.zip
+    - echo "Unzip successful.  Directory contents are now:"
+    - ls -a | echo
+    - echo "Beginning dappsmith generation..."
     - dappsmith --config config.json --dirName dapp
+    - echo "Initial generation successful.  Entering and installing..."
     - cd dapp
     - npm install
+    - echo "Installation complete.  Building..."
     - npm run build
+    - echo "Build complete.  Zipping..."
+    - zip -r build.zip build/
+    - echo "Zip complete, following output should include build.zip:"
+    - ls -a | echo
 artifacts:
-  name: build
+  name: BUILD
   files:
-    - dapp/build/**/*
+    - $CODEBUILD_SRC_DIR_DAPPSEED/dapp/build.zip

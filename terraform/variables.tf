@@ -12,3 +12,15 @@ variable "subdomain" {
     description = "subdomain on which to host the API. The API DNS will be {subdomain}.{root_domain}"
     default     = "api-test"
 }
+
+variable "npm_user" {
+    description = "Username for the NPM account which is a member of the eximchain organization. Required, @eximchain/dappsmith is private."
+}
+
+variable "npm_pass" {
+    description = "Password for the NPM account which is a member of the eximchain organization. Required, @eximchain/dappsmith is private."
+}
+
+variable "npm_email" {
+    description = "Email for the NPM account which is a member of the eximchain organization. Required, @eximchain/dappsmith is private."
+}

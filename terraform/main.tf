@@ -165,7 +165,10 @@ data "aws_iam_policy_document" "lambda_allow_s3" {
       "s3:GetObjectAcl",
       "s3:PutObjectAcl"
     ]
-    resources = ["${local.s3_bucket_arn_pattern}"]
+    resources = [
+      "${local.s3_bucket_arn_pattern}",
+      "${aws_s3_bucket.dappseed_bucket.arn}"
+    ]
   }
 
   statement {
@@ -179,7 +182,10 @@ data "aws_iam_policy_document" "lambda_allow_s3" {
           "s3:DeleteObject",
           "s3:ListObjects"
       ]
-      resources = ["${local.s3_bucket_arn_pattern}/*"]
+      resources = [
+        "${local.s3_bucket_arn_pattern}/*",
+        "${aws_s3_bucket.dappseed_bucket.arn}/*"
+      ]
   }
 }
 
@@ -244,25 +250,81 @@ data "aws_iam_policy_document" "lambda_allow_route53" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# LAMBDA IAM CODEPIPELINE ACCESS
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "allow_lambda_codepipeline" {
+  name = "allow-codepipeline-abi-clerk-lambda"
+
+  policy = "${data.aws_iam_policy_document.lambda_allow_codepipeline.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "allow_lambda_codepipeline" {
+  role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
+  policy_arn = "${aws_iam_policy.allow_lambda_codepipeline.arn}"
+}
+
+data "aws_iam_policy_document" "lambda_allow_codepipeline" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "codepipeline:CreatePipeline",
+      "codepipeline:DeletePipeline"
+    ]
+    resources = ["*"]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# LAMBDA IAM IAM ACCESS
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "allow_lambda_iam" {
+  name = "allow-iam-abi-clerk-lambda"
+
+  policy = "${data.aws_iam_policy_document.lambda_allow_iam.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "allow_lambda_iam" {
+  role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
+  policy_arn = "${aws_iam_policy.allow_lambda_iam.arn}"
+}
+
+data "aws_iam_policy_document" "lambda_allow_iam" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "iam:PassRole"
+    ]
+    resources = ["${aws_iam_role.abi_clerk_codepipeline_iam.arn}"]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # SHARED S3 BUCKETS & KEY
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_s3_bucket" "artifact_bucket" {
-  bucket = "abi-clerk-artifacts"
-  acl    = "private"
+  bucket        = "abi-clerk-artifacts"
+  acl           = "private"
+  force_destroy = true
 }
 
 resource "aws_s3_bucket" "dappseed_bucket" {
-  bucket = "abi-clerk-dappseeds"
-  acl    = "private"
+  bucket        = "abi-clerk-dappseeds"
+  acl           = "private"
+  force_destroy = true
 
   versioning {
     enabled = true
   }
-}
-
-resource "aws_kms_key" "abi_clerk_kms" {
-  description = "KMS key for abi-clerk's artifact and dappseed buckets."
-  deletion_windows_in_days = 7
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -283,8 +345,7 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
       R53_HOSTED_ZONE_ID = "${data.aws_route53_zone.hosted_zone.zone_id}"
       DNS_ROOT           = "${local.created_dns_root}"
       CODEBUILD_ID       = "${aws_codebuild_project.abi_clerk_builder.id}",
-      PIPELINE_ROLE_ARN  = "an-arn",
-      KMS_KEY_NAME       = "${aws_kms_key.abi_clerk_kms.arn}",
+      PIPELINE_ROLE_ARN  = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
       ARTIFACT_BUCKET    = "${aws_s3_bucket.artifact_bucket.id}",
       DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}"
     }
@@ -302,17 +363,158 @@ resource "aws_lambda_permission" "api_gateway_invoke_lambda" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# TODO: Add S3 bucket for Lambda fxn (env var) to support full CD
+# ---------------------------------------------------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------------------------------------------------
+# CODEPIPELINE IAM ROLE
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_role" "abi_clerk_codepipeline_iam" {
+  name = "codepipeline-role"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "codepipeline.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    },
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "codebuild.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# CODEPIPELINE IAM ACCESS
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "codepipeline" {
+  name = "allow-s3-abi-clerk-codepipeline"
+
+  policy = "${data.aws_iam_policy_document.codepipeline.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "codepipeline" {
+  role       = "${aws_iam_role.abi_clerk_codepipeline_iam.id}"
+  policy_arn = "${aws_iam_policy.codepipeline.arn}"
+}
+
+data "aws_iam_policy_document" "codepipeline" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "s3:*"
+    ]
+
+    resources = [
+      "${local.s3_bucket_arn_pattern}",
+      "${local.s3_bucket_arn_pattern}/*"
+    ]
+  }
+
+  statement {
+    sid = "2"
+
+    effect = "Allow"
+
+    // TODO: Determine if these are sufficient read permissions
+    //
+    // actions = [
+    //   "s3:GetObject",
+    //   "s3:GetObjectVersion",
+    //   "s3:GetBucketVersioning"
+    // ]
+    //
+    resources = [
+      "${aws_s3_bucket.dappseed_bucket.arn}",
+      "${aws_s3_bucket.dappseed_bucket.arn}/*",
+      "${aws_s3_bucket.artifact_bucket.arn}",
+      "${aws_s3_bucket.artifact_bucket.arn}/*"
+    ]
+
+    actions = [
+      "s3:*"
+    ]
+
+    // TODO: Limit this to something a little less reckless
+    // resources = [
+    //   "*"
+    // ]
+
+  }
+
+  statement {
+    sid = "3"
+
+    effect = "Allow"
+
+    actions = [
+      "codebuild:BatchGetBuilds",
+      "codebuild:StartBuild"
+    ]
+
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "CloudWatchLogsPolicy"
+
+    effect = "Allow"
+
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+    
+    resources = [
+      "*"
+    ]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # CODEBUILD PROJECT
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_codebuild_project" "abi_clerk_builder" {
   name = "abi_clerk_builder"
   build_timeout = 10
-  service_role = "TODO: make service role"
+  service_role = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}"
 
   environment {
     type = "LINUX_CONTAINER"
     compute_type = "BUILD_GENERAL1_MEDIUM"
     image = "aws/codebuild/nodejs:10.14.1-1.7.0"
+
+    environment_variable {
+      name  = "NPM_USER"
+      value = "${var.npm_user}"
+    }
+
+    environment_variable {
+      name  = "NPM_PASS"
+      value = "${var.npm_pass}"
+    }
+
+    environment_variable {
+      name  = "NPM_EMAIL"
+      value = "${var.npm_email}"
+    }
   }
 
   artifacts {
