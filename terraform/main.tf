@@ -170,6 +170,7 @@ data "aws_iam_policy_document" "lambda_allow_s3" {
       "s3:DeleteBucketWebsite",
       "s3:GetBucketPolicy",
       "s3:PutBucketPolicy",
+      "s3:PutBucketTagging",
       "s3:GetBucketAcl",
       "s3:PutBucketAcl",
       "s3:GetObjectAcl",
@@ -223,6 +224,7 @@ data "aws_iam_policy_document" "lambda_allow_cloudfront" {
 
     actions = [
       "cloudfront:CreateDistribution",
+      "cloudfront:TagResource",
       "cloudfront:GetDistributionConfig",
       "cloudfront:UpdateDistribution"
     ]
