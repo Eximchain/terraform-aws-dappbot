@@ -7,12 +7,9 @@ phases:
      - npm i -g @eximchain/dappsmith create-react-app
  build:
    commands:
-    - dappsmith --config config.json --dir dapp
-    - cd dapp
-    - npm install
-    - npm run build
-    - zip -r ../build.zip build/
+    - dappsmith --config config.json --dir dapp --build
 artifacts:
   name: BUILD
+  base-directory: dapp/build
   files:
-    - build.zip
+    - '**/*'
