@@ -370,7 +370,7 @@ resource "aws_lambda_permission" "api_gateway_invoke_lambda" {
 # CODEPIPELINE IAM ROLE
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_role" "abi_clerk_codepipeline_iam" {
-  name = "codepipeline-role"
+  name = "abi-clerk-codepipeline-role"
 
   assume_role_policy = <<EOF
 {
@@ -434,11 +434,11 @@ data "aws_iam_policy_document" "codepipeline" {
 
     // TODO: Determine if these are sufficient read permissions
     //
-    // actions = [
-    //   "s3:GetObject",
-    //   "s3:GetObjectVersion",
-    //   "s3:GetBucketVersioning"
-    // ]
+    actions = [
+      "s3:GetObject",
+      "s3:GetObjectVersion",
+      "s3:GetBucketVersioning"
+    ]
     //
     resources = [
       "${aws_s3_bucket.dappseed_bucket.arn}",
@@ -450,11 +450,6 @@ data "aws_iam_policy_document" "codepipeline" {
     actions = [
       "s3:*"
     ]
-
-    // TODO: Limit this to something a little less reckless
-    // resources = [
-    //   "*"
-    // ]
 
   }
 
