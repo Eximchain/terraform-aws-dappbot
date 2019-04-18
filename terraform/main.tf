@@ -321,10 +321,6 @@ resource "aws_s3_bucket" "dappseed_bucket" {
   bucket        = "abi-clerk-dappseeds"
   acl           = "private"
   force_destroy = true
-
-  versioning {
-    enabled = true
-  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
