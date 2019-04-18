@@ -413,7 +413,7 @@ data "aws_iam_policy_document" "codepipeline" {
   version = "2012-10-17"
 
   statement {
-    sid = "1"
+    sid = "S3Access"
 
     effect = "Allow"
 
@@ -423,38 +423,16 @@ data "aws_iam_policy_document" "codepipeline" {
 
     resources = [
       "${local.s3_bucket_arn_pattern}",
-      "${local.s3_bucket_arn_pattern}/*"
-    ]
-  }
-
-  statement {
-    sid = "2"
-
-    effect = "Allow"
-
-    // TODO: Determine if these are sufficient read permissions
-    //
-    actions = [
-      "s3:GetObject",
-      "s3:GetObjectVersion",
-      "s3:GetBucketVersioning"
-    ]
-    //
-    resources = [
+      "${local.s3_bucket_arn_pattern}/*",
       "${aws_s3_bucket.dappseed_bucket.arn}",
       "${aws_s3_bucket.dappseed_bucket.arn}/*",
       "${aws_s3_bucket.artifact_bucket.arn}",
       "${aws_s3_bucket.artifact_bucket.arn}/*"
     ]
-
-    actions = [
-      "s3:*"
-    ]
-
   }
 
   statement {
-    sid = "3"
+    sid = "CodeBuild"
 
     effect = "Allow"
 
