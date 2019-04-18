@@ -33,3 +33,7 @@ variable "subdomain" {
     default     = "api-test"
 }
 
+variable "create_wildcard_cert" {
+    description = "Create a new wildcard certificate.  Requires 30 minutes or more for validation.  If false, expects a validated cert to already exist for '*.subdomain.root_domain'."
+    default     = false
+}

@@ -368,7 +368,7 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
       PIPELINE_ROLE_ARN  = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
       ARTIFACT_BUCKET    = "${aws_s3_bucket.artifact_bucket.id}",
       DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}",
-      CERT_ARN           = "${aws_acm_certificate.cloudfront_cert.arn}"
+      CERT_ARN           = "${var.create_wildcard_cert ? aws_acm_certificate.cloudfront_cert.arn : data.aws_acm_certificate.cloudfront_cert.arn}"
     }
   }
 
@@ -535,13 +535,34 @@ data "local_file" "buildspec" {
 # ---------------------------------------------------------------------------------------------------------------------
 # ACM CERT for CLOUDFRONT
 # ---------------------------------------------------------------------------------------------------------------------
+data "aws_acm_certificate" "cloudfront_cert" {
+  count  = "${var.create_wildcard_cert ? 0 : 1}"
+
+  domain = "*.${var.subdomain}.${var.root_domain}"
+}
+
 resource "aws_acm_certificate" "cloudfront_cert" {
+  count = "${var.create_wildcard_cert ? 1 : 0}"
+
   domain_name       = "*.${var.subdomain}.${var.root_domain}"
   validation_method = "DNS"
+}
 
-  lifecycle {
-    create_before_destroy = true
-  }
+resource "aws_route53_record" "cloudfront_wildcard" {
+  count = "${var.create_wildcard_cert ? 1 : 0}"
+
+  name    = "${aws_acm_certificate.cloudfront_cert.domain_validation_options.0.resource_record_name}"
+  type    = "${aws_acm_certificate.cloudfront_cert.domain_validation_options.0.resource_record_type}"
+  zone_id = "${data.aws_route53_zone.hosted_zone.zone_id}"
+  records = ["${aws_acm_certificate.cloudfront_cert.domain_validation_options.0.resource_record_value}"]
+  ttl     = 60
+}
+
+resource "aws_acm_certificate_validation" "cloudfront_validation" {
+  count = "${var.create_wildcard_cert ? 1 : 0}"
+
+  certificate_arn = "${aws_acm_certificate.cloudfront_cert.arn}"
+  validation_record_fqdns = ["${aws_route53_record.cloudfront_wildcard.fqdn}"]
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
