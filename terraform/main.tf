@@ -12,11 +12,15 @@ provider "local" {
 
 locals {
     s3_bucket_arn_pattern = "arn:aws:s3:::exim-abi-clerk-*"
+<<<<<<< HEAD
     created_dns_root = ".test-subdomain.${var.root_domain}"
     default_tags {
       Application = "AbiClerk"
       ManagedBy   = "Terraform"
     }
+=======
+    created_dns_root = ".${var.subdomain}.${var.root_domain}"
+>>>>>>> Fixed merge
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -363,7 +367,8 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
       CODEBUILD_ID       = "${aws_codebuild_project.abi_clerk_builder.id}",
       PIPELINE_ROLE_ARN  = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
       ARTIFACT_BUCKET    = "${aws_s3_bucket.artifact_bucket.id}",
-      DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}"
+      DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}",
+      CERT_ARN           = "${aws_acm_certificate.cloudfront_cert.arn}"
     }
   }
 
@@ -525,6 +530,18 @@ resource "aws_codebuild_project" "abi_clerk_builder" {
 
 data "local_file" "buildspec" {
   filename = "${path.module}/buildspec.yml"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# ACM CERT for CLOUDFRONT
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_acm_certificate" "cloudfront_cert" {
+  domain_name       = "*.${var.subdomain}.${var.root_domain}"
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
