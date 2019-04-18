@@ -33,7 +33,7 @@ data "aws_route53_zone" "hosted_zone" {
 # IAM FOR LAMBDA
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_role" "abi_clerk_lambda_iam" {
-  name = "abi-clerk-lambda-iam"
+  name = "abi-clerk-lambda-iam-${var.subdomain}"
 
   assume_role_policy = "${data.aws_iam_policy_document.lambda_assume_role.json}"
 }
@@ -58,7 +58,7 @@ data "aws_iam_policy_document" "lambda_assume_role" {
 # LAMBDA IAM CLOUDWATCH ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "allow_cloudwatch" {
-  name = "allow-cloudwatch-abi-clerk-lambda"
+  name = "allow-cloudwatch-abi-clerk-lambda-${var.subdomain}"
 
   policy = "${data.aws_iam_policy_document.lambda_allow_cloudwatch.json}"
 }
@@ -89,7 +89,7 @@ data "aws_iam_policy_document" "lambda_allow_cloudwatch" {
 # LAMBDA IAM DYNAMODB ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "allow_dynamodb" {
-  name = "allow-dynamodb-abi-clerk-lambda"
+  name = "allow-dynamodb-abi-clerk-lambda-${var.subdomain}"
 
   policy = "${data.aws_iam_policy_document.lambda_allow_dynamodb.json}"
 }
@@ -137,7 +137,7 @@ data "aws_iam_policy_document" "lambda_allow_dynamodb" {
 # LAMBDA IAM S3 ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "allow_s3" {
-  name = "allow-s3-abi-clerk-lambda"
+  name = "allow-s3-abi-clerk-lambda-${var.subdomain}"
 
   policy = "${data.aws_iam_policy_document.lambda_allow_s3.json}"
 }
@@ -197,7 +197,7 @@ data "aws_iam_policy_document" "lambda_allow_s3" {
 # LAMBDA IAM CLOUDFRONT ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "allow_cloudfront" {
-  name = "allow-cloudfront-abi-clerk-lambda"
+  name = "allow-cloudfront-abi-clerk-lambda-${var.subdomain}"
 
   policy = "${data.aws_iam_policy_document.lambda_allow_cloudfront.json}"
 }
@@ -228,7 +228,7 @@ data "aws_iam_policy_document" "lambda_allow_cloudfront" {
 # LAMBDA IAM ROUTE53 ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "allow_route53" {
-  name = "allow-route53-abi-clerk-lambda"
+  name = "allow-route53-abi-clerk-lambda-${var.subdomain}"
 
   policy = "${data.aws_iam_policy_document.lambda_allow_route53.json}"
 }
@@ -257,7 +257,7 @@ data "aws_iam_policy_document" "lambda_allow_route53" {
 # LAMBDA IAM CODEPIPELINE ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "allow_lambda_codepipeline" {
-  name = "allow-codepipeline-abi-clerk-lambda"
+  name = "allow-codepipeline-abi-clerk-lambda-${var.subdomain}"
 
   policy = "${data.aws_iam_policy_document.lambda_allow_codepipeline.json}"
 }
@@ -287,7 +287,7 @@ data "aws_iam_policy_document" "lambda_allow_codepipeline" {
 # LAMBDA IAM IAM ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "allow_lambda_iam" {
-  name = "allow-iam-abi-clerk-lambda"
+  name = "allow-iam-abi-clerk-lambda-${var.subdomain}"
 
   policy = "${data.aws_iam_policy_document.lambda_allow_iam.json}"
 }
@@ -316,13 +316,13 @@ data "aws_iam_policy_document" "lambda_allow_iam" {
 # SHARED S3 BUCKETS & KEY
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_s3_bucket" "artifact_bucket" {
-  bucket        = "abi-clerk-artifacts"
+  bucket        = "abi-clerk-artifacts-${var.subdomain}"
   acl           = "private"
   force_destroy = true
 }
 
 resource "aws_s3_bucket" "dappseed_bucket" {
-  bucket        = "abi-clerk-dappseeds"
+  bucket        = "abi-clerk-dappseeds-${var.subdomain}"
   acl           = "private"
   force_destroy = true
 
@@ -336,7 +336,7 @@ resource "aws_s3_bucket" "dappseed_bucket" {
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_lambda_function" "abi_clerk_lambda" {
   filename         = "abi-clerk-lambda.zip"
-  function_name    = "abi-clerk-lambda"
+  function_name    = "abi-clerk-lambda-${var.subdomain}"
   role             = "${aws_iam_role.abi_clerk_lambda_iam.arn}"
   handler          = "index.handler"
   source_code_hash = "${base64sha256(file("abi-clerk-lambda.zip"))}"
@@ -374,7 +374,7 @@ resource "aws_lambda_permission" "api_gateway_invoke_lambda" {
 # CODEPIPELINE IAM ROLE
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_role" "abi_clerk_codepipeline_iam" {
-  name = "abi-clerk-codepipeline-role"
+  name = "abi-clerk-codepipeline-role-${var.subdomain}"
 
   assume_role_policy = <<EOF
 {
@@ -403,7 +403,7 @@ EOF
 # CODEPIPELINE IAM ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "codepipeline" {
-  name = "allow-s3-abi-clerk-codepipeline"
+  name = "allow-s3-abi-clerk-codepipeline-${var.subdomain}"
 
   policy = "${data.aws_iam_policy_document.codepipeline.json}"
 }
@@ -469,7 +469,7 @@ data "aws_iam_policy_document" "codepipeline" {
 # CODEBUILD PROJECT
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_codebuild_project" "abi_clerk_builder" {
-  name = "abi_clerk_builder"
+  name = "abi-clerk-builder-${var.subdomain}"
   build_timeout = 10
   service_role = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}"
 
@@ -513,7 +513,7 @@ data "local_file" "buildspec" {
 # API GATEWAY
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_api_gateway_rest_api" "abi_clerk_api" {
-  name        = "abi-clerk"
+  name        = "abi-clerk-${var.subdomain}"
   description = "Proxy to handle requests to the ABI Clerk API"
 }
 
@@ -583,7 +583,7 @@ resource "aws_route53_record" "example" {
 # DYNAMODB TABLES
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_dynamodb_table" "dapp_table" {
-  name           = "abi-clerk-dapps"
+  name           = "abi-clerk-dapps-${var.subdomain}"
   billing_mode   = "PROVISIONED"
   read_capacity  = 1
   write_capacity = 1
