@@ -1,0 +1,48 @@
+{
+  "variables": {
+    "npm_user":"",
+    "npm_pass":"",
+    "npm_email":""
+  },
+  "builders" : [
+    {
+      "type": "docker",
+      "image": "ubuntu",
+      "commit": true,
+      "changes": [
+        "CMD "
+      ]
+    }
+  ],
+  "provisioners" : [
+    {
+      "type": "shell",
+      "script": "provisioning-scripts/install-deps.sh"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "npm i -g npm-cli-login",
+        "npm-cli-login -u {{user `npm_user`}} -p {{user `npm_pass`}} -e {{user `npm_email`}}",
+        "npm i -g @eximchain/dappsmith create-react-app"
+      ]
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "manifest",
+      "output": "manifests/guardian.json",
+      "strip_path": true
+    },
+    {
+      "type": "docker-tag",
+      "repository": "984931625683.dkr.ecr.us-east-1.amazonaws.com/eximchain/abi-clerk",
+      "tag": "0.1"
+    },
+    {
+      "type": "docker-push",
+      "ecr_login": true,
+      "login_server": "https://12345.dkr.ecr.us-east-1.amazonaws.com/"
+    }
+  ]
+}
