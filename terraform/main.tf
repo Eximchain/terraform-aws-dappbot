@@ -13,6 +13,10 @@ provider "local" {
 locals {
     s3_bucket_arn_pattern = "arn:aws:s3:::exim-abi-clerk-*"
     created_dns_root = ".test-subdomain.${var.root_domain}"
+    default_tags {
+      Application = "AbiClerk"
+      ManagedBy   = "Terraform"
+    }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -36,6 +40,8 @@ resource "aws_iam_role" "abi_clerk_lambda_iam" {
   name = "abi-clerk-lambda-iam-${var.subdomain}"
 
   assume_role_policy = "${data.aws_iam_policy_document.lambda_assume_role.json}"
+
+  tags = "${local.default_tags}"
 }
 
 data "aws_iam_policy_document" "lambda_assume_role" {
@@ -319,6 +325,8 @@ resource "aws_s3_bucket" "artifact_bucket" {
   bucket        = "abi-clerk-artifacts-${var.subdomain}"
   acl           = "private"
   force_destroy = true
+
+  tags = "${local.default_tags}"
 }
 
 resource "aws_s3_bucket" "dappseed_bucket" {
@@ -329,6 +337,8 @@ resource "aws_s3_bucket" "dappseed_bucket" {
   versioning {
     enabled = true
   }
+
+  tags = "${local.default_tags}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -354,6 +364,8 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
       DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}"
     }
   }
+
+  tags = "${local.default_tags}"
 }
 
 resource "aws_lambda_permission" "api_gateway_invoke_lambda" {
@@ -397,6 +409,8 @@ resource "aws_iam_role" "abi_clerk_codepipeline_iam" {
   ]
 }
 EOF
+
+  tags = "${local.default_tags}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -503,6 +517,8 @@ resource "aws_codebuild_project" "abi_clerk_builder" {
     type = "CODEPIPELINE"
     buildspec = "${data.local_file.buildspec.content}"
   }
+
+  tags = "${local.default_tags}"
 }
 
 data "local_file" "buildspec" {
@@ -593,4 +609,6 @@ resource "aws_dynamodb_table" "dapp_table" {
     name = "DappName"
     type = "S"
   }
+
+  tags = "${local.default_tags}"
 }
