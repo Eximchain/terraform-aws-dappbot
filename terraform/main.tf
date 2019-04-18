@@ -2,8 +2,12 @@
 # PROVIDERS
 # ---------------------------------------------------------------------------------------------------------------------
 provider "aws" {
-    region  = "${var.aws_region}"
-    version = "~> 2.2"
+  region  = "${var.aws_region}"
+  version = "~> 2.2"
+}
+
+provider "local" {
+  version = "~> 1.2"
 }
 
 locals {
