@@ -544,7 +544,9 @@ resource "aws_api_gateway_method" "abi_clerk_method" {
   rest_api_id   = "${aws_api_gateway_rest_api.abi_clerk_api.id}"
   resource_id   = "${aws_api_gateway_resource.abi_clerk_resource.id}"
   http_method   = "ANY"
-  authorization = "NONE"
+
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = "${aws_api_gateway_authorizer.api_auth.id}"
 
   request_parameters {
     "method.request.path.proxy" = true
@@ -569,6 +571,15 @@ resource "aws_api_gateway_deployment" "abi_clerk_deploy_test_stage" {
 
   rest_api_id = "${aws_api_gateway_rest_api.abi_clerk_api.id}"
   stage_name  = "test"
+}
+
+resource "aws_api_gateway_authorizer" "api_auth" {
+  name          = "abi-clerk-auth-${var.subdomain}"
+  rest_api_id   = "${aws_api_gateway_rest_api.abi_clerk_api.id}"
+  provider_arns = ["${aws_cognito_user_pool.registered_users.arn}"]
+
+  identity_source = "method.request.header.Authorization"
+  type            = "COGNITO_USER_POOLS"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -613,4 +624,59 @@ resource "aws_dynamodb_table" "dapp_table" {
   }
 
   tags = "${local.default_tags}"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# COGNITO RESOURCES FOR AUTH
+# ---------------------------------------------------------------------------------------------------------------------
+locals {
+  redirect_uri = "https://www.eximchain.com"
+}
+resource "aws_cognito_user_pool" "registered_users" {
+  name = "abi-clerk-users-${var.subdomain}"
+
+  username_attributes      = ["email"]
+  auto_verified_attributes = ["email"]
+
+  admin_create_user_config {
+    allow_admin_create_user_only = true
+    unused_account_validity_days = 7
+  }
+
+  password_policy {
+    minimum_length    = 8
+    require_lowercase = false
+    require_uppercase = false
+    require_numbers   = false
+    require_symbols   = false
+  }
+
+  verification_message_template {
+    default_email_option = "CONFIRM_WITH_LINK"
+  }
+
+  tags = "${local.default_tags}"
+}
+
+resource "aws_cognito_user_pool_domain" "cognito_domain" {
+  domain       = "eximtest-abi-clerk-${var.subdomain}"
+  user_pool_id = "${aws_cognito_user_pool.registered_users.id}"
+}
+
+resource "aws_cognito_user_pool_client" "api_client" {
+  name         = "abi-clerk-client-${var.subdomain}"
+  user_pool_id = "${aws_cognito_user_pool.registered_users.id}"
+
+  allowed_oauth_flows  = ["code", "implicit"]
+  allowed_oauth_scopes = ["email", "openid", "profile"]
+
+  allowed_oauth_flows_user_pool_client = true
+
+  callback_urls        = ["${local.redirect_uri}"]
+  logout_urls          = ["${local.redirect_uri}"]
+  default_redirect_uri = "${local.redirect_uri}"
+
+  supported_identity_providers = ["COGNITO"]
+
+  read_attributes = ["email"]
 }
