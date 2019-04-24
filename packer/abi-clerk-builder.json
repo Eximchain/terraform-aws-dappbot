@@ -1,48 +1,44 @@
 {
   "variables": {
-    "npm_user":"",
-    "npm_pass":"",
-    "npm_email":""
+    "npm_user"  : "{{env `NPM_USER`}}",
+    "npm_pass"  : "{{env `NPM_PASS`}}",
+    "npm_email" : "{{env `NPM_EMAIL`}}"
   },
   "builders" : [
     {
       "type": "docker",
-      "image": "ubuntu",
-      "commit": true,
-      "changes": [
-        "CMD "
-      ]
+      "image": "node:10",
+      "commit": true
     }
   ],
   "provisioners" : [
     {
       "type": "shell",
-      "script": "provisioning-scripts/install-deps.sh"
-    },
-    {
-      "type": "shell",
       "inline": [
+        "npm config set registry https://registry.npmjs.org",
         "npm i -g npm-cli-login",
         "npm-cli-login -u {{user `npm_user`}} -p {{user `npm_pass`}} -e {{user `npm_email`}}",
-        "npm i -g @eximchain/dappsmith create-react-app"
+        "npm i --verbose -g --unsafe @eximchain/dappsmith create-react-app"
       ]
     }
   ],
   "post-processors": [
     {
       "type": "manifest",
-      "output": "manifests/guardian.json",
+      "output": "manifests/abi-clerk-builder.json",
       "strip_path": true
     },
-    {
-      "type": "docker-tag",
-      "repository": "984931625683.dkr.ecr.us-east-1.amazonaws.com/eximchain/abi-clerk",
-      "tag": "0.1"
-    },
-    {
-      "type": "docker-push",
-      "ecr_login": true,
-      "login_server": "https://12345.dkr.ecr.us-east-1.amazonaws.com/"
-    }
+    [
+      {
+        "type": "docker-tag",
+        "repository": "984931625683.dkr.ecr.us-east-1.amazonaws.com/eximchain/abi-clerk",
+        "tag": "0.1"
+      },
+      {
+        "type": "docker-push",
+        "ecr_login": true,
+        "login_server": "https://984931625683.dkr.ecr.us-east-1.amazonaws.com/"
+      }
+    ]
   ]
 }

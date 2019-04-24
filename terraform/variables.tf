@@ -14,6 +14,14 @@ variable "npm_email" {
     description = "Email for the NPM account which is a member of the eximchain organization. Required, @eximchain/dappsmith is private."
 }
 
+variable "codebuild_image" {
+    description = "Name of the Docker image kept in AWS ECR.  No leading /, just org/repo:tag"
+}
+
+variable "aws_account_id" {
+    description = "12-digit AWS Account ID.  Required for building ECR URL."
+}
+
 # --------------------------------------------------------
 # OPTIONAL AWS & DOMAIN VARIABLES
 # --------------------------------------------------------

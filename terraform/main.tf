@@ -484,6 +484,25 @@ data "aws_iam_policy_document" "codepipeline" {
       "*"
     ]
   }
+
+  statement {
+    sid = "ReadOnlyECR"
+
+		effect = "Allow"
+
+		actions = [
+			"ecr:GetAuthorizationToken",
+			"ecr:BatchCheckLayerAvailability",
+			"ecr:GetDownloadUrlForLayer",
+			"ecr:GetRepositoryPolicy",
+			"ecr:DescribeRepositories",
+			"ecr:ListImages",
+			"ecr:DescribeImages",
+			"ecr:BatchGetImage"
+		]
+
+		resources = ["*"]
+	}
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -497,7 +516,8 @@ resource "aws_codebuild_project" "abi_clerk_builder" {
   environment {
     type = "LINUX_CONTAINER"
     compute_type = "BUILD_GENERAL1_MEDIUM"
-    image = "aws/codebuild/nodejs:10.14.1-1.7.0"
+    image = "${var.aws_account_id}.dkr.ecr.us-east-1.amazonaws.com/${var.codebuild_image}"
+    image_pull_credentials_type = "SERVICE_ROLE"
 
     environment_variable {
       name  = "NPM_USER"
