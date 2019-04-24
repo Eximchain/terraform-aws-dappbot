@@ -12,15 +12,11 @@ provider "local" {
 
 locals {
     s3_bucket_arn_pattern = "arn:aws:s3:::exim-abi-clerk-*"
-<<<<<<< HEAD
-    created_dns_root = ".test-subdomain.${var.root_domain}"
     default_tags {
       Application = "AbiClerk"
       ManagedBy   = "Terraform"
     }
-=======
     created_dns_root = ".${var.subdomain}.${var.root_domain}"
->>>>>>> Fixed merge
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

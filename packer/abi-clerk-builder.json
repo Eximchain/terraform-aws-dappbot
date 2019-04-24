@@ -32,7 +32,7 @@
       {
         "type": "docker-tag",
         "repository": "984931625683.dkr.ecr.us-east-1.amazonaws.com/eximchain/abi-clerk",
-        "tag": "0.1"
+        "tag": "0.2"
       },
       {
         "type": "docker-push",
