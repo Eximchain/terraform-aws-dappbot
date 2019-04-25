@@ -655,6 +655,23 @@ resource "aws_cognito_user_pool" "registered_users" {
     default_email_option = "CONFIRM_WITH_LINK"
   }
 
+  schema {
+    name = "num_dapps"
+
+    attribute_data_type      = "Number"
+    # TODO: Understand this attribute
+    developer_only_attribute = true
+    mutable                  = true
+
+    # Custom attributes cannot be required
+    required                 = false
+
+    number_attribute_constraints {
+      min_value = 0
+      max_value = 1000
+    }
+  }
+
   tags = "${local.default_tags}"
 }
 
