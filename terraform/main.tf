@@ -130,7 +130,8 @@ data "aws_iam_policy_document" "lambda_allow_dynamodb" {
           "dynamodb:DeleteItem",
           "dynamodb:GetItem",
           "dynamodb:PutItem",
-          "dynamodb:UpdateItem"
+          "dynamodb:UpdateItem",
+          "dynamodb:Scan"
       ]
       resources = [
         "${aws_dynamodb_table.dapp_table.arn}",
@@ -321,6 +322,35 @@ data "aws_iam_policy_document" "lambda_allow_iam" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# LAMBDA IAM COGNITO ACCESS
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "allow_lambda_cognito" {
+  name = "allow-cognito-abi-clerk-lambda-${var.subdomain}"
+
+  policy = "${data.aws_iam_policy_document.lambda_allow_cognito.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "allow_lambda_cognito" {
+  role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
+  policy_arn = "${aws_iam_policy.allow_lambda_cognito.arn}"
+}
+
+data "aws_iam_policy_document" "lambda_allow_cognito" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "cognito-idp:AdminGetUser"
+    ]
+    resources = ["${aws_cognito_user_pool.registered_users.arn}"]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # SHARED S3 BUCKETS & KEY
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_s3_bucket" "artifact_bucket" {
@@ -364,6 +394,7 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
       PIPELINE_ROLE_ARN  = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
       ARTIFACT_BUCKET    = "${aws_s3_bucket.artifact_bucket.id}",
       DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}"
+      COGNITO_USER_POOL  = "${aws_cognito_user_pool.registered_users.id}"
     }
   }
 
