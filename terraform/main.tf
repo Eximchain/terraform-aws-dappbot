@@ -355,7 +355,7 @@ resource "null_resource" "lambda_wait" {
   provisioner "local-exec" {
     command = "sleep 10"
   }
-  depends_on = ["aws_iam_role.abi_clerk_codepipeline_iam"]
+  depends_on = ["aws_iam_role.abi_clerk_lambda_iam"]
 }
 
 resource "aws_lambda_function" "abi_clerk_lambda" {
@@ -512,7 +512,8 @@ data "aws_iam_policy_document" "codepipeline" {
     ]
     
     resources = ["*"]
-	}
+  }
+
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
