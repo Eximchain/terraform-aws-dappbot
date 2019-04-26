@@ -494,13 +494,13 @@ data "aws_iam_policy_document" "codepipeline" {
       "*"
     ]
   }
-
+  
   statement {
     sid = "ReadOnlyECR"
-
-		effect = "Allow"
-
-		actions = [
+    
+    effect = "Allow"
+    
+    actions = [
       "ecr:GetAuthorizationToken",
       "ecr:BatchCheckLayerAvailability",
       "ecr:GetDownloadUrlForLayer",
@@ -510,8 +510,8 @@ data "aws_iam_policy_document" "codepipeline" {
       "ecr:DescribeImages",
       "ecr:BatchGetImage"
     ]
-
-		resources = ["*"]
+    
+    resources = ["*"]
 	}
 }
 
