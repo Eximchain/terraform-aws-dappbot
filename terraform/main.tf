@@ -18,6 +18,7 @@ locals {
     }
     created_dns_root = ".${var.subdomain}.${var.root_domain}"
     cert_arn = "${var.create_wildcard_cert ? aws_acm_certificate.cloudfront_cert.arn : element(coalescelist(data.aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
+    image_url = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -352,7 +353,7 @@ resource "aws_s3_bucket" "dappseed_bucket" {
 # Wait ensures that the role is fully created when Lambda tries to assume it.
 resource "null_resource" "lambda_wait" {
   provisioner "local-exec" {
-    command = "sleep 30"
+    command = "sleep 10"
   }
   depends_on = ["aws_iam_role.abi_clerk_codepipeline_iam"]
 }
@@ -500,15 +501,15 @@ data "aws_iam_policy_document" "codepipeline" {
 		effect = "Allow"
 
 		actions = [
-			"ecr:GetAuthorizationToken",
-			"ecr:BatchCheckLayerAvailability",
-			"ecr:GetDownloadUrlForLayer",
-			"ecr:GetRepositoryPolicy",
-			"ecr:DescribeRepositories",
-			"ecr:ListImages",
-			"ecr:DescribeImages",
-			"ecr:BatchGetImage"
-		]
+      "ecr:GetAuthorizationToken",
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:GetRepositoryPolicy",
+      "ecr:DescribeRepositories",
+      "ecr:ListImages",
+      "ecr:DescribeImages",
+      "ecr:BatchGetImage"
+    ]
 
 		resources = ["*"]
 	}
@@ -525,7 +526,7 @@ resource "aws_codebuild_project" "abi_clerk_builder" {
   environment {
     type = "LINUX_CONTAINER"
     compute_type = "BUILD_GENERAL1_MEDIUM"
-    image = "${var.aws_account_id}.dkr.ecr.us-east-1.amazonaws.com/${var.codebuild_image}"
+    image = "${local.image_url}"
     image_pull_credentials_type = "SERVICE_ROLE"
 
     environment_variable {

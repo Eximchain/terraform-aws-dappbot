@@ -18,10 +18,6 @@ variable "codebuild_image" {
     description = "Name of the Docker image kept in AWS ECR.  No leading /, just org/repo:tag.  Expects to have dappsmith and create-react-app installed."
 }
 
-variable "aws_account_id" {
-    description = "12-digit AWS Account ID.  Required for building ECR URL."
-}
-
 # --------------------------------------------------------
 # OPTIONAL AWS & DOMAIN VARIABLES
 # --------------------------------------------------------
