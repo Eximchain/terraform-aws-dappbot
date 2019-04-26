@@ -12,11 +12,13 @@ provider "local" {
 
 locals {
     s3_bucket_arn_pattern = "arn:aws:s3:::exim-abi-clerk-*"
-    created_dns_root = ".test-subdomain.${var.root_domain}"
     default_tags {
       Application = "AbiClerk"
       ManagedBy   = "Terraform"
     }
+    created_dns_root = ".${var.subdomain}.${var.root_domain}"
+    cert_arn = "${var.create_wildcard_cert ? aws_acm_certificate.cloudfront_cert.arn : element(coalescelist(data.aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
+    image_url = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -226,7 +228,8 @@ data "aws_iam_policy_document" "lambda_allow_cloudfront" {
       "cloudfront:CreateDistribution",
       "cloudfront:TagResource",
       "cloudfront:GetDistributionConfig",
-      "cloudfront:UpdateDistribution"
+      "cloudfront:UpdateDistribution",
+      "cloudfront:DeleteDistribution"
     ]
     resources = ["*"]
   }
@@ -346,6 +349,15 @@ resource "aws_s3_bucket" "dappseed_bucket" {
 # ---------------------------------------------------------------------------------------------------------------------
 # LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
+
+# Wait ensures that the role is fully created when Lambda tries to assume it.
+resource "null_resource" "lambda_wait" {
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+  depends_on = ["aws_iam_role.abi_clerk_lambda_iam"]
+}
+
 resource "aws_lambda_function" "abi_clerk_lambda" {
   filename         = "abi-clerk-lambda.zip"
   function_name    = "abi-clerk-lambda-${var.subdomain}"
@@ -363,9 +375,12 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
       CODEBUILD_ID       = "${aws_codebuild_project.abi_clerk_builder.id}",
       PIPELINE_ROLE_ARN  = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
       ARTIFACT_BUCKET    = "${aws_s3_bucket.artifact_bucket.id}",
-      DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}"
+      DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}",
+      CERT_ARN           = "${local.cert_arn}"
     }
   }
+
+  depends_on = ["null_resource.lambda_wait"]
 
   tags = "${local.default_tags}"
 }
@@ -479,6 +494,26 @@ data "aws_iam_policy_document" "codepipeline" {
       "*"
     ]
   }
+  
+  statement {
+    sid = "ReadOnlyECR"
+    
+    effect = "Allow"
+    
+    actions = [
+      "ecr:GetAuthorizationToken",
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:GetRepositoryPolicy",
+      "ecr:DescribeRepositories",
+      "ecr:ListImages",
+      "ecr:DescribeImages",
+      "ecr:BatchGetImage"
+    ]
+    
+    resources = ["*"]
+  }
+
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -490,9 +525,10 @@ resource "aws_codebuild_project" "abi_clerk_builder" {
   service_role = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}"
 
   environment {
-    type = "LINUX_CONTAINER"
-    compute_type = "BUILD_GENERAL1_MEDIUM"
-    image = "aws/codebuild/nodejs:10.14.1-1.7.0"
+    type                        = "LINUX_CONTAINER"
+    compute_type                = "BUILD_GENERAL1_MEDIUM"
+    image                       = "${local.image_url}"
+    image_pull_credentials_type = "SERVICE_ROLE"
 
     environment_variable {
       name  = "NPM_USER"
@@ -525,6 +561,39 @@ resource "aws_codebuild_project" "abi_clerk_builder" {
 
 data "local_file" "buildspec" {
   filename = "${path.module}/buildspec.yml"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# ACM CERT for CLOUDFRONT
+# ---------------------------------------------------------------------------------------------------------------------
+data "aws_acm_certificate" "cloudfront_cert" {
+  count  = "${var.create_wildcard_cert ? 0 : 1}"
+
+  domain = "*.${var.subdomain}.${var.root_domain}"
+}
+
+resource "aws_acm_certificate" "cloudfront_cert" {
+  count = "${var.create_wildcard_cert ? 1 : 0}"
+
+  domain_name       = "*.${var.subdomain}.${var.root_domain}"
+  validation_method = "DNS"
+}
+
+resource "aws_route53_record" "cloudfront_wildcard" {
+  count = "${var.create_wildcard_cert ? 1 : 0}"
+
+  name    = "${aws_acm_certificate.cloudfront_cert.domain_validation_options.0.resource_record_name}"
+  type    = "${aws_acm_certificate.cloudfront_cert.domain_validation_options.0.resource_record_type}"
+  zone_id = "${data.aws_route53_zone.hosted_zone.zone_id}"
+  records = ["${aws_acm_certificate.cloudfront_cert.domain_validation_options.0.resource_record_value}"]
+  ttl     = 60
+}
+
+resource "aws_acm_certificate_validation" "cloudfront_validation" {
+  count = "${var.create_wildcard_cert ? 1 : 0}"
+
+  certificate_arn         = "${aws_acm_certificate.cloudfront_cert.arn}"
+  validation_record_fqdns = ["${aws_route53_record.cloudfront_wildcard.fqdn}"]
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

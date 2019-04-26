@@ -14,6 +14,10 @@ variable "npm_email" {
     description = "Email for the NPM account which is a member of the eximchain organization. Required, @eximchain/dappsmith is private."
 }
 
+variable "codebuild_image" {
+    description = "Name of the Docker image kept in AWS ECR.  No leading /, just org/repo:tag.  Expects to have dappsmith and create-react-app installed."
+}
+
 # --------------------------------------------------------
 # OPTIONAL AWS & DOMAIN VARIABLES
 # --------------------------------------------------------
@@ -33,3 +37,7 @@ variable "subdomain" {
     default     = "api-test"
 }
 
+variable "create_wildcard_cert" {
+    description = "Create a new wildcard subdomain certificate.  Requires 30 minutes or more for validation.  If false, expects a validated cert to already exist for '*.subdomain.root_domain'."
+    default     = false
+}
