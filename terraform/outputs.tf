@@ -3,5 +3,5 @@ output "api_dns" {
 }
 
 output "cloudfront_cert_arn" {
-    value = "${aws_acm_certificate.cloudfront_cert.arn}"
+    value = "${aws_acm_certificate.cloudfront_cert.*.arn}"
 }

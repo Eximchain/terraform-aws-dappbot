@@ -7,7 +7,7 @@
   "builders" : [
     {
       "type": "docker",
-      "image": "node:10",
+      "image": "node:10.15",
       "commit": true
     }
   ],
@@ -15,10 +15,11 @@
     {
       "type": "shell",
       "inline": [
-        "npm config set registry https://registry.npmjs.org",
-        "npm i -g npm-cli-login",
+        "npm i -g npm-cli-login typescript create-react-app",
         "npm-cli-login -u {{user `npm_user`}} -p {{user `npm_pass`}} -e {{user `npm_email`}}",
-        "npm i --verbose -g --unsafe @eximchain/dappsmith create-react-app"
+        "npm cache verify",
+        "npm i -g --unsafe --verbose @eximchain/dappsmith",
+        "npm cache verify"
       ]
     }
   ],
@@ -32,7 +33,7 @@
       {
         "type": "docker-tag",
         "repository": "984931625683.dkr.ecr.us-east-1.amazonaws.com/eximchain/abi-clerk",
-        "tag": "0.2"
+        "tag": "0.4"
       },
       {
         "type": "docker-push",

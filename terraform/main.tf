@@ -17,6 +17,7 @@ locals {
       ManagedBy   = "Terraform"
     }
     created_dns_root = ".${var.subdomain}.${var.root_domain}"
+    cert_arn = "${var.create_wildcard_cert ? aws_acm_certificate.cloudfront_cert.arn : element(coalescelist(data.aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -226,7 +227,8 @@ data "aws_iam_policy_document" "lambda_allow_cloudfront" {
       "cloudfront:CreateDistribution",
       "cloudfront:TagResource",
       "cloudfront:GetDistributionConfig",
-      "cloudfront:UpdateDistribution"
+      "cloudfront:UpdateDistribution",
+      "cloudfront:DeleteDistribution"
     ]
     resources = ["*"]
   }
@@ -346,6 +348,15 @@ resource "aws_s3_bucket" "dappseed_bucket" {
 # ---------------------------------------------------------------------------------------------------------------------
 # LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
+
+# Wait ensures that the role is fully created when Lambda tries to assume it.
+resource "null_resource" "lambda_wait" {
+  provisioner "local-exec" {
+    command = "sleep 30"
+  }
+  depends_on = ["aws_iam_role.abi_clerk_codepipeline_iam"]
+}
+
 resource "aws_lambda_function" "abi_clerk_lambda" {
   filename         = "abi-clerk-lambda.zip"
   function_name    = "abi-clerk-lambda-${var.subdomain}"
@@ -364,9 +375,11 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
       PIPELINE_ROLE_ARN  = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
       ARTIFACT_BUCKET    = "${aws_s3_bucket.artifact_bucket.id}",
       DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}",
-      CERT_ARN           = "${var.create_wildcard_cert ? aws_acm_certificate.cloudfront_cert.arn : data.aws_acm_certificate.cloudfront_cert.arn}"
+      CERT_ARN           = "${local.cert_arn}"
     }
   }
+
+  depends_on = ["null_resource.lambda_wait"]
 
   tags = "${local.default_tags}"
 }
