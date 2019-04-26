@@ -525,9 +525,9 @@ resource "aws_codebuild_project" "abi_clerk_builder" {
   service_role = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}"
 
   environment {
-    type = "LINUX_CONTAINER"
-    compute_type = "BUILD_GENERAL1_MEDIUM"
-    image = "${local.image_url}"
+    type                        = "LINUX_CONTAINER"
+    compute_type                = "BUILD_GENERAL1_MEDIUM"
+    image                       = "${local.image_url}"
     image_pull_credentials_type = "SERVICE_ROLE"
 
     environment_variable {
@@ -592,7 +592,7 @@ resource "aws_route53_record" "cloudfront_wildcard" {
 resource "aws_acm_certificate_validation" "cloudfront_validation" {
   count = "${var.create_wildcard_cert ? 1 : 0}"
 
-  certificate_arn = "${aws_acm_certificate.cloudfront_cert.arn}"
+  certificate_arn         = "${aws_acm_certificate.cloudfront_cert.arn}"
   validation_record_fqdns = ["${aws_route53_record.cloudfront_wildcard.fqdn}"]
 }
 
