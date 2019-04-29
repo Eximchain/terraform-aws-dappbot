@@ -132,7 +132,8 @@ data "aws_iam_policy_document" "lambda_allow_dynamodb" {
           "dynamodb:DeleteItem",
           "dynamodb:GetItem",
           "dynamodb:PutItem",
-          "dynamodb:UpdateItem"
+          "dynamodb:UpdateItem",
+          "dynamodb:Scan"
       ]
       resources = [
         "${aws_dynamodb_table.dapp_table.arn}",
@@ -324,6 +325,35 @@ data "aws_iam_policy_document" "lambda_allow_iam" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# LAMBDA IAM COGNITO ACCESS
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "allow_lambda_cognito" {
+  name = "allow-cognito-abi-clerk-lambda-${var.subdomain}"
+
+  policy = "${data.aws_iam_policy_document.lambda_allow_cognito.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "allow_lambda_cognito" {
+  role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
+  policy_arn = "${aws_iam_policy.allow_lambda_cognito.arn}"
+}
+
+data "aws_iam_policy_document" "lambda_allow_cognito" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "cognito-idp:AdminGetUser"
+    ]
+    resources = ["${aws_cognito_user_pool.registered_users.arn}"]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # SHARED S3 BUCKETS & KEY
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_s3_bucket" "artifact_bucket" {
@@ -377,6 +407,7 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
       ARTIFACT_BUCKET    = "${aws_s3_bucket.artifact_bucket.id}",
       DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}",
       CERT_ARN           = "${local.cert_arn}"
+      COGNITO_USER_POOL  = "${aws_cognito_user_pool.registered_users.id}"
     }
   }
 
@@ -613,7 +644,9 @@ resource "aws_api_gateway_method" "abi_clerk_method" {
   rest_api_id   = "${aws_api_gateway_rest_api.abi_clerk_api.id}"
   resource_id   = "${aws_api_gateway_resource.abi_clerk_resource.id}"
   http_method   = "ANY"
-  authorization = "NONE"
+
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = "${aws_api_gateway_authorizer.api_auth.id}"
 
   request_parameters {
     "method.request.path.proxy" = true
@@ -638,6 +671,15 @@ resource "aws_api_gateway_deployment" "abi_clerk_deploy_test_stage" {
 
   rest_api_id = "${aws_api_gateway_rest_api.abi_clerk_api.id}"
   stage_name  = "test"
+}
+
+resource "aws_api_gateway_authorizer" "api_auth" {
+  name          = "abi-clerk-auth-${var.subdomain}"
+  rest_api_id   = "${aws_api_gateway_rest_api.abi_clerk_api.id}"
+  provider_arns = ["${aws_cognito_user_pool.registered_users.arn}"]
+
+  identity_source = "method.request.header.Authorization"
+  type            = "COGNITO_USER_POOLS"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -682,4 +724,79 @@ resource "aws_dynamodb_table" "dapp_table" {
   }
 
   tags = "${local.default_tags}"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# COGNITO RESOURCES FOR AUTH
+# ---------------------------------------------------------------------------------------------------------------------
+locals {
+  redirect_uri = "https://www.eximchain.com"
+}
+resource "aws_cognito_user_pool" "registered_users" {
+  name = "abi-clerk-users-${var.subdomain}"
+
+  username_attributes      = ["email"]
+  auto_verified_attributes = ["email"]
+
+  admin_create_user_config {
+    allow_admin_create_user_only = true
+    unused_account_validity_days = 7
+  }
+
+  password_policy {
+    minimum_length    = 8
+    require_lowercase = false
+    require_uppercase = false
+    require_numbers   = false
+    require_symbols   = false
+  }
+
+  verification_message_template {
+    default_email_option = "CONFIRM_WITH_LINK"
+  }
+
+  schema {
+    name = "num_dapps"
+
+    attribute_data_type      = "Number"
+    # TODO: Understand this attribute
+    developer_only_attribute = true
+    mutable                  = true
+
+    # Custom attributes cannot be required
+    required                 = false
+
+    number_attribute_constraints {
+      min_value = 0
+      max_value = 1000
+    }
+  }
+
+  tags = "${local.default_tags}"
+}
+
+resource "aws_cognito_user_pool_domain" "cognito_domain" {
+  domain       = "eximtest-abi-clerk-${var.subdomain}"
+  user_pool_id = "${aws_cognito_user_pool.registered_users.id}"
+}
+
+resource "aws_cognito_user_pool_client" "api_client" {
+  name         = "abi-clerk-client-${var.subdomain}"
+  user_pool_id = "${aws_cognito_user_pool.registered_users.id}"
+
+  allowed_oauth_flows  = ["code", "implicit"]
+  allowed_oauth_scopes = ["email", "openid", "profile"]
+
+  allowed_oauth_flows_user_pool_client = true
+
+  callback_urls        = ["${local.redirect_uri}"]
+  logout_urls          = ["${local.redirect_uri}"]
+  default_redirect_uri = "${local.redirect_uri}"
+
+  supported_identity_providers = ["COGNITO"]
+
+  read_attributes = ["email"]
+
+  # Allows us to skip the challenge flow for script-based testing
+  explicit_auth_flows = ["USER_PASSWORD_AUTH"]
 }
