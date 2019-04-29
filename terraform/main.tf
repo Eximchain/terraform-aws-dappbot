@@ -10,6 +10,10 @@ provider "local" {
   version = "~> 1.2"
 }
 
+provider "null" {
+  version = "~> 2.1"
+}
+
 locals {
     s3_bucket_arn_pattern = "arn:aws:s3:::exim-abi-clerk-*"
     default_tags {
