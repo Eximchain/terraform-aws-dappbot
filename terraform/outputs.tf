@@ -4,6 +4,7 @@ output "api_dns" {
 
 output "cloudfront_cert_arn" {
     value = "${element(coalescelist(aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
+}
 
 output "cognito_client_id" {
     value = "${aws_cognito_user_pool_client.api_client.id}"
