@@ -727,4 +727,7 @@ resource "aws_cognito_user_pool_client" "api_client" {
   supported_identity_providers = ["COGNITO"]
 
   read_attributes = ["email"]
+
+  # Allows us to skip the challenge flow for script-based testing
+  explicit_auth_flows = ["USER_PASSWORD_AUTH"]
 }
