@@ -137,7 +137,7 @@ data "aws_iam_policy_document" "lambda_allow_dynamodb" {
           "dynamodb:GetItem",
           "dynamodb:PutItem",
           "dynamodb:UpdateItem",
-          "dynamodb:Scan"
+          "dynamodb:Query"
       ]
       resources = [
         "${aws_dynamodb_table.dapp_table.arn}",
@@ -722,8 +722,23 @@ resource "aws_dynamodb_table" "dapp_table" {
   write_capacity = 1
   hash_key       = "DappName"
 
+  global_secondary_index {
+    name     = "OwnerEmailIndex"
+    hash_key = "OwnerEmail"
+
+    write_capacity = 1
+    read_capacity  = 1
+
+    projection_type = "KEYS_ONLY"
+  }
+
   attribute {
     name = "DappName"
+    type = "S"
+  }
+
+  attribute {
+    name = "OwnerEmail"
     type = "S"
   }
 
