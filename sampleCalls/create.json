@@ -1,6 +1,5 @@
 {
   "DappName":"weyldappexample",
-  "OwnerEmail":"john@eximchain.com",
   "ContractAddr":"0x000000000000000000000000000000000000002A",
   "Web3URL":"https://gamma-tx-executor.eximchain-dev.com",
   "GuardianURL":"https://gamma.eximchain-dev.com",
