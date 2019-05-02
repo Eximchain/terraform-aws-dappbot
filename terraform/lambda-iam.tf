@@ -193,7 +193,9 @@ data "aws_iam_policy_document" "lambda_allow_cloudfront" {
       "cloudfront:TagResource",
       "cloudfront:GetDistributionConfig",
       "cloudfront:UpdateDistribution",
-      "cloudfront:DeleteDistribution"
+      "cloudfront:DeleteDistribution",
+      "cloudfront:ListDistributions",
+      "cloudfront:ListTagsForResource"
     ]
     resources = ["*"]
   }
