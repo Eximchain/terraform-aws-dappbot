@@ -294,7 +294,7 @@ resource "aws_dynamodb_table" "dapp_table" {
     write_capacity = 1
     read_capacity  = 1
 
-    projection_type = "KEYS_ONLY"
+    projection_type = "ALL"
   }
 
   attribute {
