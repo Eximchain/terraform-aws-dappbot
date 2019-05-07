@@ -20,7 +20,7 @@ locals {
       Application = "AbiClerk"
       ManagedBy   = "Terraform"
     }
-    created_dns_root = ".${var.subdomain}.${var.root_domain}"
+    created_dns_root = ".${var.root_domain}"
     cert_arn = "${var.create_wildcard_cert ? aws_acm_certificate.cloudfront_cert.arn : element(coalescelist(data.aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
     image_url = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
 }
