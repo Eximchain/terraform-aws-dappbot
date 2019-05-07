@@ -169,13 +169,13 @@ data "local_file" "buildspec" {
 data "aws_acm_certificate" "cloudfront_cert" {
   count  = "${var.create_wildcard_cert ? 0 : 1}"
 
-  domain = "*.${var.subdomain}.${var.root_domain}"
+  domain = "*${local.created_dns_root}"
 }
 
 resource "aws_acm_certificate" "cloudfront_cert" {
   count = "${var.create_wildcard_cert ? 1 : 0}"
 
-  domain_name       = "*.${var.subdomain}.${var.root_domain}"
+  domain_name       = "*${local.created_dns_root}"
   validation_method = "DNS"
 }
 
