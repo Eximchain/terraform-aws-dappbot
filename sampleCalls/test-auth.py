@@ -12,6 +12,7 @@ def parse_args():
     parser_create = subparsers.add_parser('create', help='Create a cognito user')
     parser_create.add_argument('--user-pool-id', dest='user_pool_id', required=True)
     parser_create.add_argument('--num-dapps', dest='num_dapps', required=True)
+    parser_create.add_argument('--temp-password', dest='temp_password', default=None)
     parser_delete = subparsers.add_parser('delete', help='Delete a cognito user')
     parser_delete.add_argument('--user-pool-id', dest='user_pool_id', required=True)
     parser_login = subparsers.add_parser('login', help='Login as a cognito user')
@@ -20,17 +21,21 @@ def parse_args():
     return parser.parse_args()
 
 def create(args):
-    response = cognito.admin_create_user(
-        UserPoolId=args.user_pool_id,
-        Username=args.username,
-        DesiredDeliveryMediums=['EMAIL'],
-        UserAttributes=[
+    kwargs = {
+        'UserPoolId': args.user_pool_id,
+        'Username': args.username,
+        'DesiredDeliveryMediums': ['EMAIL'],
+        'UserAttributes': [
             {
                 'Name': NUM_DAPPS_ATTR,
                 'Value': args.num_dapps
             }
         ]
-    )
+    }
+    if args.temp_password:
+        kwargs['TemporaryPassword'] = args.temp_password
+        
+    response = cognito.admin_create_user(**kwargs)
     print(f'Created user {args.username} for user pool {args.user_pool_id}. Check email for a temporary password.')
 
 def delete(args):
