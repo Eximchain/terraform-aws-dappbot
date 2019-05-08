@@ -31,7 +31,7 @@ locals {
 data "aws_caller_identity" "current" {}
 
 data "aws_acm_certificate" "cert" {
-  domain      = "${var.root_domain}"
+  domain      = "*.${var.root_domain}"
   most_recent = true
 }
 
