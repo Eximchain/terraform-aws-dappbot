@@ -18,6 +18,10 @@ variable "codebuild_image" {
     description = "Name of the Docker image kept in AWS ECR.  No leading /, just org/repo:tag.  Expects to have dappsmith and create-react-app installed."
 }
 
+variable "sendgrid_key" {
+    description = "Sendgrid API key to be used for sending users confirmation emails."
+}
+
 # --------------------------------------------------------
 # OPTIONAL AWS & DOMAIN VARIABLES
 # --------------------------------------------------------

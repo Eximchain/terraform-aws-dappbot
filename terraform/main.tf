@@ -94,6 +94,7 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
       DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}",
       CERT_ARN           = "${local.cert_arn}"
       COGNITO_USER_POOL  = "${aws_cognito_user_pool.registered_users.id}"
+      SENDGRID_API_KEY   = "${var.sendgrid_key}"
     }
   }
 
