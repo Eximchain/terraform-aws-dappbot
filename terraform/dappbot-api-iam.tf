@@ -73,3 +73,34 @@ data "aws_iam_policy_document" "dappbot_api_allow_dynamodb" {
       ]
   }
 }
+
+# ---------------------------------------------------------------------------------------------------------------------
+# LAMBDA IAM CLOUDWATCH ACCESS
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "dappbot_api_allow_cloudwatch" {
+  name = "allow-cloudwatch-dappbot-api-lambda-${var.subdomain}"
+
+  policy = "${data.aws_iam_policy_document.dappbot_api_allow_cloudwatch.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_api_allow_cloudwatch" {
+  role       = "${aws_iam_role.dappbot_api_lambda_iam.id}"
+  policy_arn = "${aws_iam_policy.dappbot_api_allow_cloudwatch.arn}"
+}
+
+data "aws_iam_policy_document" "dappbot_api_allow_cloudwatch" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+    resources = ["arn:aws:logs:*:*:*"]
+  }
+}
