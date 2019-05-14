@@ -255,7 +255,9 @@ data "aws_iam_policy_document" "lambda_allow_codepipeline" {
 
     actions = [
       "codepipeline:CreatePipeline",
-      "codepipeline:DeletePipeline"
+      "codepipeline:DeletePipeline",
+      "codepipeline:PutJobSuccessResult",
+      "codepipeline:PutJobFailureResult"
     ]
     resources = ["*"]
   }
