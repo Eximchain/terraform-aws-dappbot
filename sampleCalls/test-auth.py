@@ -1,7 +1,7 @@
 import argparse
 import boto3
 
-NUM_DAPPS_ATTR = 'dev:custom:num_dapps'
+NUM_DAPPS_ATTR = 'custom:num_dapps'
 
 cognito = boto3.client('cognito-idp')
 

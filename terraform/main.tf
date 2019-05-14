@@ -343,8 +343,7 @@ resource "aws_cognito_user_pool" "registered_users" {
     name = "num_dapps"
 
     attribute_data_type      = "Number"
-    # TODO: Understand this attribute
-    developer_only_attribute = true
+    developer_only_attribute = false
     mutable                  = true
 
     # Custom attributes cannot be required
@@ -379,7 +378,8 @@ resource "aws_cognito_user_pool_client" "api_client" {
 
   supported_identity_providers = ["COGNITO"]
 
-  read_attributes = ["email"]
+  read_attributes  = ["email", "custom:num_dapps"]
+  write_attributes = ["email"]
 
   # Allows us to skip the challenge flow for script-based testing
   explicit_auth_flows = ["USER_PASSWORD_AUTH"]
