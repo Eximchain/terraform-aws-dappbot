@@ -104,3 +104,32 @@ data "aws_iam_policy_document" "dappbot_api_allow_cloudwatch" {
     resources = ["arn:aws:logs:*:*:*"]
   }
 }
+
+# ---------------------------------------------------------------------------------------------------------------------
+# LAMBDA IAM SQS ACCESS
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "dappbot_api_allow_sqs" {
+  name = "allow-sqs-dappbot-api-lambda-${var.subdomain}"
+
+  policy = "${data.aws_iam_policy_document.dappbot_api_allow_sqs.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_api_allow_sqs" {
+  role       = "${aws_iam_role.dappbot_api_lambda_iam.id}"
+  policy_arn = "${aws_iam_policy.dappbot_api_allow_sqs.arn}"
+}
+
+data "aws_iam_policy_document" "dappbot_api_allow_sqs" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "sqs:SendMessage"
+    ]
+    resources = ["${aws_sqs_queue.abi_clerk.arn}"]
+  }
+}
