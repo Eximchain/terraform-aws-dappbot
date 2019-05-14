@@ -1,15 +1,15 @@
 # ---------------------------------------------------------------------------------------------------------------------
-# IAM FOR LAMBDA
+# IAM FOR ABI CLERK
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_role" "abi_clerk_lambda_iam" {
   name = "abi-clerk-lambda-iam-${var.subdomain}"
 
-  assume_role_policy = "${data.aws_iam_policy_document.lambda_assume_role.json}"
+  assume_role_policy = "${data.aws_iam_policy_document.abi_clerk_lambda_assume_role.json}"
 
   tags = "${local.default_tags}"
 }
 
-data "aws_iam_policy_document" "lambda_assume_role" {
+data "aws_iam_policy_document" "abi_clerk_lambda_assume_role" {
   version = "2012-10-17"
 
   statement {
@@ -28,18 +28,18 @@ data "aws_iam_policy_document" "lambda_assume_role" {
 # ---------------------------------------------------------------------------------------------------------------------
 # LAMBDA IAM CLOUDWATCH ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_iam_policy" "allow_cloudwatch" {
+resource "aws_iam_policy" "abi_clerk_allow_cloudwatch" {
   name = "allow-cloudwatch-abi-clerk-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.lambda_allow_cloudwatch.json}"
+  policy = "${data.aws_iam_policy_document.abi_clerk_allow_cloudwatch.json}"
 }
 
-resource "aws_iam_role_policy_attachment" "allow_cloudwatch" {
+resource "aws_iam_role_policy_attachment" "abi_clerk_allow_cloudwatch" {
   role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
-  policy_arn = "${aws_iam_policy.allow_cloudwatch.arn}"
+  policy_arn = "${aws_iam_policy.abi_clerk_allow_cloudwatch.arn}"
 }
 
-data "aws_iam_policy_document" "lambda_allow_cloudwatch" {
+data "aws_iam_policy_document" "abi_clerk_allow_cloudwatch" {
   version = "2012-10-17"
 
   statement {
@@ -59,18 +59,18 @@ data "aws_iam_policy_document" "lambda_allow_cloudwatch" {
 # ---------------------------------------------------------------------------------------------------------------------
 # LAMBDA IAM DYNAMODB ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_iam_policy" "allow_dynamodb" {
+resource "aws_iam_policy" "abi_clerk_allow_dynamodb" {
   name = "allow-dynamodb-abi-clerk-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.lambda_allow_dynamodb.json}"
+  policy = "${data.aws_iam_policy_document.abi_clerk_allow_dynamodb.json}"
 }
 
-resource "aws_iam_role_policy_attachment" "allow_dynamodb" {
+resource "aws_iam_role_policy_attachment" "abi_clerk_allow_dynamodb" {
   role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
-  policy_arn = "${aws_iam_policy.allow_dynamodb.arn}"
+  policy_arn = "${aws_iam_policy.abi_clerk_allow_dynamodb.arn}"
 }
 
-data "aws_iam_policy_document" "lambda_allow_dynamodb" {
+data "aws_iam_policy_document" "abi_clerk_allow_dynamodb" {
   version = "2012-10-17"
 
   statement {
@@ -108,18 +108,18 @@ data "aws_iam_policy_document" "lambda_allow_dynamodb" {
 # ---------------------------------------------------------------------------------------------------------------------
 # LAMBDA IAM S3 ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_iam_policy" "allow_s3" {
+resource "aws_iam_policy" "abi_clerk_allow_s3" {
   name = "allow-s3-abi-clerk-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.lambda_allow_s3.json}"
+  policy = "${data.aws_iam_policy_document.abi_clerk_allow_s3.json}"
 }
 
-resource "aws_iam_role_policy_attachment" "allow_s3" {
+resource "aws_iam_role_policy_attachment" "abi_clerk_allow_s3" {
   role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
-  policy_arn = "${aws_iam_policy.allow_s3.arn}"
+  policy_arn = "${aws_iam_policy.abi_clerk_allow_s3.arn}"
 }
 
-data "aws_iam_policy_document" "lambda_allow_s3" {
+data "aws_iam_policy_document" "abi_clerk_allow_s3" {
   version = "2012-10-17"
 
   statement {
@@ -169,18 +169,18 @@ data "aws_iam_policy_document" "lambda_allow_s3" {
 # ---------------------------------------------------------------------------------------------------------------------
 # LAMBDA IAM CLOUDFRONT ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_iam_policy" "allow_cloudfront" {
+resource "aws_iam_policy" "abi_clerk_allow_cloudfront" {
   name = "allow-cloudfront-abi-clerk-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.lambda_allow_cloudfront.json}"
+  policy = "${data.aws_iam_policy_document.abi_clerk_allow_cloudfront.json}"
 }
 
-resource "aws_iam_role_policy_attachment" "allow_cloudfront" {
+resource "aws_iam_role_policy_attachment" "abi_clerk_allow_cloudfront" {
   role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
-  policy_arn = "${aws_iam_policy.allow_cloudfront.arn}"
+  policy_arn = "${aws_iam_policy.abi_clerk_allow_cloudfront.arn}"
 }
 
-data "aws_iam_policy_document" "lambda_allow_cloudfront" {
+data "aws_iam_policy_document" "abi_clerk_allow_cloudfront" {
   version = "2012-10-17"
 
   statement {
@@ -205,18 +205,18 @@ data "aws_iam_policy_document" "lambda_allow_cloudfront" {
 # ---------------------------------------------------------------------------------------------------------------------
 # LAMBDA IAM ROUTE53 ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_iam_policy" "allow_route53" {
+resource "aws_iam_policy" "abi_clerk_allow_route53" {
   name = "allow-route53-abi-clerk-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.lambda_allow_route53.json}"
+  policy = "${data.aws_iam_policy_document.abi_clerk_allow_route53.json}"
 }
 
-resource "aws_iam_role_policy_attachment" "allow_route53" {
+resource "aws_iam_role_policy_attachment" "abi_clerk_allow_route53" {
   role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
-  policy_arn = "${aws_iam_policy.allow_route53.arn}"
+  policy_arn = "${aws_iam_policy.abi_clerk_allow_route53.arn}"
 }
 
-data "aws_iam_policy_document" "lambda_allow_route53" {
+data "aws_iam_policy_document" "abi_clerk_allow_route53" {
   version = "2012-10-17"
 
   statement {
@@ -234,18 +234,18 @@ data "aws_iam_policy_document" "lambda_allow_route53" {
 # ---------------------------------------------------------------------------------------------------------------------
 # LAMBDA IAM CODEPIPELINE ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_iam_policy" "allow_lambda_codepipeline" {
+resource "aws_iam_policy" "abi_clerk_allow_codepipeline" {
   name = "allow-codepipeline-abi-clerk-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.lambda_allow_codepipeline.json}"
+  policy = "${data.aws_iam_policy_document.abi_clerk_allow_codepipeline.json}"
 }
 
-resource "aws_iam_role_policy_attachment" "allow_lambda_codepipeline" {
+resource "aws_iam_role_policy_attachment" "abi_clerk_allow_codepipeline" {
   role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
-  policy_arn = "${aws_iam_policy.allow_lambda_codepipeline.arn}"
+  policy_arn = "${aws_iam_policy.abi_clerk_allow_codepipeline.arn}"
 }
 
-data "aws_iam_policy_document" "lambda_allow_codepipeline" {
+data "aws_iam_policy_document" "abi_clerk_allow_codepipeline" {
   version = "2012-10-17"
 
   statement {
@@ -264,18 +264,18 @@ data "aws_iam_policy_document" "lambda_allow_codepipeline" {
 # ---------------------------------------------------------------------------------------------------------------------
 # LAMBDA IAM IAM ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_iam_policy" "allow_lambda_iam" {
+resource "aws_iam_policy" "abi_clerk_allow_lambda_iam" {
   name = "allow-iam-abi-clerk-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.lambda_allow_iam.json}"
+  policy = "${data.aws_iam_policy_document.abi_clerk_allow_iam.json}"
 }
 
-resource "aws_iam_role_policy_attachment" "allow_lambda_iam" {
+resource "aws_iam_role_policy_attachment" "abi_clerk_allow_lambda_iam" {
   role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
-  policy_arn = "${aws_iam_policy.allow_lambda_iam.arn}"
+  policy_arn = "${aws_iam_policy.abi_clerk_allow_lambda_iam.arn}"
 }
 
-data "aws_iam_policy_document" "lambda_allow_iam" {
+data "aws_iam_policy_document" "abi_clerk_allow_iam" {
   version = "2012-10-17"
 
   statement {
@@ -293,18 +293,18 @@ data "aws_iam_policy_document" "lambda_allow_iam" {
 # ---------------------------------------------------------------------------------------------------------------------
 # LAMBDA IAM COGNITO ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_iam_policy" "allow_lambda_cognito" {
+resource "aws_iam_policy" "abi_clerk_allow_lambda_cognito" {
   name = "allow-cognito-abi-clerk-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.lambda_allow_cognito.json}"
+  policy = "${data.aws_iam_policy_document.abi_clerk_allow_cognito.json}"
 }
 
-resource "aws_iam_role_policy_attachment" "allow_lambda_cognito" {
+resource "aws_iam_role_policy_attachment" "abi_clerk_allow_lambda_cognito" {
   role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
-  policy_arn = "${aws_iam_policy.allow_lambda_cognito.arn}"
+  policy_arn = "${aws_iam_policy.abi_clerk_allow_lambda_cognito.arn}"
 }
 
-data "aws_iam_policy_document" "lambda_allow_cognito" {
+data "aws_iam_policy_document" "abi_clerk_allow_cognito" {
   version = "2012-10-17"
 
   statement {

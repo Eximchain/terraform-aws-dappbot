@@ -71,29 +71,50 @@ resource "null_resource" "lambda_wait" {
   provisioner "local-exec" {
     command = "sleep 10"
   }
-  depends_on = ["aws_iam_role.abi_clerk_lambda_iam"]
+  depends_on = ["aws_iam_role.dappbot_api_lambda_iam"]
 }
 
-resource "aws_lambda_function" "abi_clerk_lambda" {
-  filename         = "abi-clerk-lambda.zip"
-  function_name    = "abi-clerk-lambda-${var.subdomain}"
-  role             = "${aws_iam_role.abi_clerk_lambda_iam.arn}"
+//resource "aws_lambda_function" "abi_clerk_lambda" {
+//  filename         = "abi-clerk-lambda.zip"
+//  function_name    = "abi-clerk-lambda-${var.subdomain}"
+//  role             = "${aws_iam_role.abi_clerk_lambda_iam.arn}"
+//  handler          = "index.handler"
+//  source_code_hash = "${base64sha256(file("abi-clerk-lambda.zip"))}"
+//  runtime          = "nodejs8.10"
+//  timeout          = 900
+
+//  environment {
+//    variables {
+//      DDB_TABLE          = "${aws_dynamodb_table.dapp_table.id}"
+//      R53_HOSTED_ZONE_ID = "${data.aws_route53_zone.hosted_zone.zone_id}"
+//      DNS_ROOT           = "${local.created_dns_root}"
+//      CODEBUILD_ID       = "${aws_codebuild_project.abi_clerk_builder.id}",
+//      PIPELINE_ROLE_ARN  = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
+//      ARTIFACT_BUCKET    = "${aws_s3_bucket.artifact_bucket.id}",
+//      DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}",
+//      CERT_ARN           = "${local.cert_arn}"
+//      COGNITO_USER_POOL  = "${aws_cognito_user_pool.registered_users.id}"
+//    }
+//  }
+
+//  depends_on = ["null_resource.lambda_wait"]
+
+//  tags = "${local.default_tags}"
+//}
+
+resource "aws_lambda_function" "dappbot_api_lambda" {
+  filename         = "dappbot-api-lambda.zip"
+  function_name    = "dappbot-api-lambda-${var.subdomain}"
+  role             = "${aws_iam_role.dappbot_api_lambda_iam.arn}"
   handler          = "index.handler"
-  source_code_hash = "${base64sha256(file("abi-clerk-lambda.zip"))}"
+  source_code_hash = "${base64sha256(file("dappbot-api-lambda.zip"))}"
   runtime          = "nodejs8.10"
   timeout          = 900
 
   environment {
     variables {
-      DDB_TABLE          = "${aws_dynamodb_table.dapp_table.id}"
-      R53_HOSTED_ZONE_ID = "${data.aws_route53_zone.hosted_zone.zone_id}"
-      DNS_ROOT           = "${local.created_dns_root}"
-      CODEBUILD_ID       = "${aws_codebuild_project.abi_clerk_builder.id}",
-      PIPELINE_ROLE_ARN  = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
-      ARTIFACT_BUCKET    = "${aws_s3_bucket.artifact_bucket.id}",
-      DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}",
-      CERT_ARN           = "${local.cert_arn}"
-      COGNITO_USER_POOL  = "${aws_cognito_user_pool.registered_users.id}"
+      DDB_TABLE  = "${aws_dynamodb_table.dapp_table.id}"
+      SQS_QUEUE  = "${aws_sqs_queue.abi_clerk.id}"
     }
   }
 
@@ -105,7 +126,7 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
 resource "aws_lambda_permission" "api_gateway_invoke_lambda" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
-  function_name = "${aws_lambda_function.abi_clerk_lambda.function_name}"
+  function_name = "${aws_lambda_function.dappbot_api_lambda.function_name}"
   principal     = "apigateway.amazonaws.com"
 
   # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
@@ -228,7 +249,7 @@ resource "aws_api_gateway_integration" "abi_clerk_integration" {
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.abi_clerk_lambda.arn}/invocations"
+  uri                     = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.dappbot_api_lambda.arn}/invocations"
  
   request_parameters {
     "integration.request.path.proxy" = "method.request.path.proxy"
@@ -383,4 +404,17 @@ resource "aws_cognito_user_pool_client" "api_client" {
 
   # Allows us to skip the challenge flow for script-based testing
   explicit_auth_flows = ["USER_PASSWORD_AUTH"]
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# SQS QUEUE
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_sqs_queue" "abi_clerk" {
+  name                      = "abi-clerk-queue-${var.subdomain}"
+  message_retention_seconds = 3600
+
+  // TODO: Dead Letter Queue
+  //redrive_policy            = "{\"deadLetterTargetArn\":\"${aws_sqs_queue.terraform_queue_deadletter.arn}\",\"maxReceiveCount\":4}"
+
+  tags = "${local.default_tags}"
 }
