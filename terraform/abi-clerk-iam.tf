@@ -318,3 +318,35 @@ data "aws_iam_policy_document" "abi_clerk_allow_cognito" {
     resources = ["${aws_cognito_user_pool.registered_users.arn}"]
   }
 }
+
+# ---------------------------------------------------------------------------------------------------------------------
+# LAMBDA IAM SQS ACCESS
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "abi_clerk_allow_sqs" {
+  name = "allow-sqs-abi-clerk-lambda-${var.subdomain}"
+
+  policy = "${data.aws_iam_policy_document.abi_clerk_allow_sqs.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "abi_clerk_allow_sqs" {
+  role       = "${aws_iam_role.abi_clerk_lambda_iam.id}"
+  policy_arn = "${aws_iam_policy.abi_clerk_allow_sqs.arn}"
+}
+
+data "aws_iam_policy_document" "abi_clerk_allow_sqs" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "sqs:ReceiveMessage",
+      "sqs:DeleteMessage",
+      "sqs:GetQueueAttributes",
+      "sqs:ChangeMessageVisibility"
+    ]
+    resources = ["${aws_sqs_queue.abi_clerk.arn}"]
+  }
+}
