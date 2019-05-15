@@ -137,6 +137,7 @@ data "aws_iam_policy_document" "lambda_allow_s3" {
       "s3:GetBucketPolicy",
       "s3:PutBucketPolicy",
       "s3:PutBucketTagging",
+      "s3:PutBucketCORS",
       "s3:GetBucketAcl",
       "s3:PutBucketAcl",
       "s3:GetObjectAcl",
@@ -161,7 +162,8 @@ data "aws_iam_policy_document" "lambda_allow_s3" {
       ]
       resources = [
         "${local.s3_bucket_arn_pattern}/*",
-        "${aws_s3_bucket.dappseed_bucket.arn}/*"
+        "${aws_s3_bucket.dappseed_bucket.arn}/*",
+        "${aws_s3_bucket.artifact_bucket.arn}"
       ]
   }
 }
@@ -255,7 +257,9 @@ data "aws_iam_policy_document" "lambda_allow_codepipeline" {
 
     actions = [
       "codepipeline:CreatePipeline",
-      "codepipeline:DeletePipeline"
+      "codepipeline:DeletePipeline",
+      "codepipeline:PutJobSuccessResult",
+      "codepipeline:PutJobFailureResult"
     ]
     resources = ["*"]
   }
