@@ -18,12 +18,8 @@ variable "codebuild_image" {
     description = "Name of the Docker image kept in AWS ECR.  No leading /, just org/repo:tag.  Expects to have dappsmith and create-react-app installed."
 }
 
-variable "sendgrid_key" {
-    description = "Sendgrid API key to be used for sending users confirmation emails."
-}
-
 # --------------------------------------------------------
-# OPTIONAL AWS & DOMAIN VARIABLES
+# OPTIONAL AWS, DOMAIN, & SENDGRID VARIABLES
 # --------------------------------------------------------
 
 variable "aws_region" {
@@ -44,4 +40,9 @@ variable "subdomain" {
 variable "create_wildcard_cert" {
     description = "Create a new wildcard subdomain certificate.  Requires 30 minutes or more for validation.  If false, expects a validated cert to already exist for '*.subdomain.root_domain'."
     default     = false
+}
+
+variable "sendgrid_key" {
+    description = "Sendgrid API key to be used for sending users confirmation emails."
+    default     = ""
 }
