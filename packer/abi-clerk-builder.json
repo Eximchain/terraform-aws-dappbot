@@ -6,7 +6,7 @@
     "aws_account_id" : "984931625683",
     "aws_region"     : "us-east-1",
     "repository"     : "eximchain/abi-clerk",
-    "repository_tag" : "0.4"
+    "image_tag"      : "0.4"
   },
   "builders" : [
     {
@@ -37,7 +37,7 @@
       {
         "type": "docker-tag",
         "repository": "{{user `aws_account_id`}}.dkr.ecr.{{user `aws_region`}}.amazonaws.com/{{user `repository`}}",
-        "tag": "{{user `repository_tag`}}"
+        "tag": "{{user `image_tag`}}"
       },
       {
         "type": "docker-push",
