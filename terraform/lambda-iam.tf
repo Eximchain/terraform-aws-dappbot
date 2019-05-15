@@ -137,6 +137,7 @@ data "aws_iam_policy_document" "lambda_allow_s3" {
       "s3:GetBucketPolicy",
       "s3:PutBucketPolicy",
       "s3:PutBucketTagging",
+      "s3:PutBucketCORS",
       "s3:GetBucketAcl",
       "s3:PutBucketAcl",
       "s3:GetObjectAcl",
