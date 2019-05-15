@@ -161,7 +161,8 @@ data "aws_iam_policy_document" "lambda_allow_s3" {
       ]
       resources = [
         "${local.s3_bucket_arn_pattern}/*",
-        "${aws_s3_bucket.dappseed_bucket.arn}/*"
+        "${aws_s3_bucket.dappseed_bucket.arn}/*",
+        "${aws_s3_bucket.artifact_bucket.arn}"
       ]
   }
 }

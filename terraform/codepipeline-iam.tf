@@ -79,6 +79,18 @@ data "aws_iam_policy_document" "codepipeline" {
   }
 
   statement {
+    sid = "Lambda"
+
+    effect = "Allow"
+
+    actions = [
+      "lambda:InvokeFunction"
+    ]
+
+    resources = ["*"]
+  }
+
+  statement {
     sid = "CloudWatchLogsPolicy"
 
     effect = "Allow"
