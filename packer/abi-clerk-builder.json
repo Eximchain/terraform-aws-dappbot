@@ -1,11 +1,12 @@
 {
   "variables": {
-    "npm_user"  : "{{env `NPM_USER`}}",
-    "npm_pass"  : "{{env `NPM_PASS`}}",
-    "npm_email" : "{{env `NPM_EMAIL`}}",
+    "npm_user"       : "{{env `NPM_USER`}}",
+    "npm_pass"       : "{{env `NPM_PASS`}}",
+    "npm_email"      : "{{env `NPM_EMAIL`}}",
     "aws_account_id" : "984931625683",
-    "aws_region" : "us-east-1",
-    "repository" : "eximchain/abi-clerk"
+    "aws_region"     : "us-east-1",
+    "repository"     : "eximchain/abi-clerk",
+    "repository_tag" : "0.4"
   },
   "builders" : [
     {
@@ -36,7 +37,7 @@
       {
         "type": "docker-tag",
         "repository": "{{user `aws_account_id`}}.dkr.ecr.{{user `aws_region`}}.amazonaws.com/{{user `repository`}}",
-        "tag": "0.4"
+        "tag": "{{user `repository_tag`}}"
       },
       {
         "type": "docker-push",
