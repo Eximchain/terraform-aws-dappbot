@@ -66,7 +66,7 @@ data "aws_iam_policy_document" "codepipeline" {
   }
 
   statement {
-    sid = "CodeBuild"
+    sid = "CodeBuildStart"
 
     effect = "Allow"
 
@@ -75,6 +75,25 @@ data "aws_iam_policy_document" "codepipeline" {
       "codebuild:StartBuild"
     ]
 
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "LambdaInvoke"
+
+    effect = "Allow"
+
+    actions = [
+      "lambda:InvokeFunction"
+    ]
+
+    // A known issue with the Lambda IAM permissions system makes it impossible
+    // to grant more granular permissions.  lambda:InvokeFunction cannot be called
+    // on specific functions, and lambda:Invoke is not recognized as a valid policy.
+    // Given that only our Lambda can create the CodePipeline which has this role,
+    // I think it ought to be fine.  Frustrating, though.  - John
+    //
+    // https://stackoverflow.com/q/48031334/2128308
     resources = ["*"]
   }
 

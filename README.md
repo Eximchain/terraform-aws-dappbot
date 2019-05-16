@@ -1,9 +1,23 @@
 # terraform-aws-abi-clerk
 Terraform infrastructure to run ABI Clerk
 
-## Testing
+## Deployment
+Before `terraform apply`ing this module, the `abi-clerk-builder` image needs to have been built into an [Amazon ECR](https://aws.amazon.com/ecr/) repository.  
 
-You can run test calls against the API from the sampleCalls directory
+If you know this has already happened, just make sure to fillset `codebuild_image` in `terraform.tfvars` to `[repository-name]:tag` (e.g. `eximchain/abi-clerk:0.4`).
+
+If you need to build the image yourself, first make sure that you set the following NPM auth variables:
+- `NPM_EMAIL`: Email for an account with read access to the `@eximchain/dappsmith` repository.
+- `NPM_USER`: Username of above account, which is distinct from the email.
+- `NPM_PASS`: Pass of above account.  Make sure to escape any special characters, echo the value to be certain it's what you need it to be.
+
+Before running `packer build abi-clerk-builder.json`, double-check that the `aws_account_id`, `aws_region`, `repository`, and `image_tag` variables are all set to appropriate values.
+
+## Dev Testing
+
+You can run test calls against the API from the sampleCalls directory.
+
+> **First change the `DappName` in `create/read.json`, and don't commit your changes.**
 
 ### Create a user
 
