@@ -81,7 +81,7 @@ resource "aws_lambda_function" "dappbot_api_lambda" {
   handler          = "index.handler"
   source_code_hash = "${base64sha256(file("dappbot-api-lambda.zip"))}"
   runtime          = "nodejs8.10"
-  timeout          = 300
+  timeout          = 30
 
   environment {
     variables {
@@ -126,7 +126,7 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
   handler          = "index.handler"
   source_code_hash = "${base64sha256(file("abi-clerk-lambda.zip"))}"
   runtime          = "nodejs8.10"
-  timeout          = 300
+  timeout          = 90
 
   environment {
     variables {
@@ -444,7 +444,7 @@ resource "aws_cognito_user_pool_client" "api_client" {
 resource "aws_sqs_queue" "abi_clerk" {
   name                       = "abi-clerk-queue-${var.subdomain}"
   message_retention_seconds  = 3600
-  visibility_timeout_seconds = 300
+  visibility_timeout_seconds = 90
 
   // TODO: Dead Letter Queue
   //redrive_policy            = "{\"deadLetterTargetArn\":\"${aws_sqs_queue.terraform_queue_deadletter.arn}\",\"maxReceiveCount\":4}"
