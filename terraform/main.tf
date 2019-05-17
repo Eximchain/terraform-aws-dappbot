@@ -446,8 +446,14 @@ resource "aws_sqs_queue" "abi_clerk" {
   message_retention_seconds  = 3600
   visibility_timeout_seconds = 90
 
-  // TODO: Dead Letter Queue
-  //redrive_policy            = "{\"deadLetterTargetArn\":\"${aws_sqs_queue.terraform_queue_deadletter.arn}\",\"maxReceiveCount\":4}"
+  redrive_policy            = "{\"deadLetterTargetArn\":\"${aws_sqs_queue.abi_clerk_deadletter.arn}\",\"maxReceiveCount\":3}"
+
+  tags = "${local.default_tags}"
+}
+
+resource "aws_sqs_queue" "abi_clerk_deadletter" {
+  name                       = "abi-clerk-deadletter-${var.subdomain}"
+  message_retention_seconds  = 1209600
 
   tags = "${local.default_tags}"
 }
