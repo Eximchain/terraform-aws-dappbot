@@ -63,11 +63,56 @@ resource "aws_s3_bucket" "dappseed_bucket" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# LAMBDA FUNCTION
+# DAPPBOT API LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
 
 # Wait ensures that the role is fully created when Lambda tries to assume it.
-resource "null_resource" "lambda_wait" {
+resource "null_resource" "dappbot_api_lambda_wait" {
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+  depends_on = ["aws_iam_role.dappbot_api_lambda_iam"]
+}
+
+resource "aws_lambda_function" "dappbot_api_lambda" {
+  filename         = "dappbot-api-lambda.zip"
+  function_name    = "dappbot-api-lambda-${var.subdomain}"
+  role             = "${aws_iam_role.dappbot_api_lambda_iam.arn}"
+  handler          = "index.handler"
+  source_code_hash = "${base64sha256(file("dappbot-api-lambda.zip"))}"
+  runtime          = "nodejs8.10"
+  timeout          = 30
+
+  environment {
+    variables {
+      COGNITO_USER_POOL  = "${aws_cognito_user_pool.registered_users.id}"
+      DDB_TABLE          = "${aws_dynamodb_table.dapp_table.id}"
+      DNS_ROOT           = "${local.created_dns_root}"
+      SQS_QUEUE          = "${aws_sqs_queue.abi_clerk.id}"
+    }
+  }
+
+  depends_on = ["null_resource.dappbot_api_lambda_wait"]
+
+  tags = "${local.default_tags}"
+}
+
+resource "aws_lambda_permission" "api_gateway_invoke_lambda" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = "${aws_lambda_function.dappbot_api_lambda.function_name}"
+  principal     = "apigateway.amazonaws.com"
+
+  # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
+  source_arn = "${aws_api_gateway_rest_api.abi_clerk_api.execution_arn}/*/*/*"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# ABI CLERK LAMBDA FUNCTION
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Wait ensures that the role is fully created when Lambda tries to assume it.
+resource "null_resource" "abi_clerk_lambda_wait" {
   provisioner "local-exec" {
     command = "sleep 10"
   }
@@ -81,7 +126,7 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
   handler          = "index.handler"
   source_code_hash = "${base64sha256(file("abi-clerk-lambda.zip"))}"
   runtime          = "nodejs8.10"
-  timeout          = 900
+  timeout          = 90
 
   environment {
     variables {
@@ -98,19 +143,26 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
     }
   }
 
-  depends_on = ["null_resource.lambda_wait"]
+  depends_on = ["null_resource.abi_clerk_lambda_wait"]
 
   tags = "${local.default_tags}"
 }
 
-resource "aws_lambda_permission" "api_gateway_invoke_lambda" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+resource "aws_lambda_permission" "sqs_invoke_lambda" {
+  statement_id  = "SqsAllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = "${aws_lambda_function.abi_clerk_lambda.function_name}"
-  principal     = "apigateway.amazonaws.com"
+  principal     = "sqs.amazonaws.com"
 
   # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
-  source_arn = "${aws_api_gateway_rest_api.abi_clerk_api.execution_arn}/*/*/*"
+  source_arn = "${aws_sqs_queue.abi_clerk.arn}"
+}
+
+resource "aws_lambda_event_source_mapping" "abi_clerk_sqs_event" {
+  batch_size        = 1
+  event_source_arn  = "${aws_sqs_queue.abi_clerk.arn}"
+  enabled           = true
+  function_name     = "${aws_lambda_function.abi_clerk_lambda.arn}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -229,7 +281,7 @@ resource "aws_api_gateway_integration" "abi_clerk_integration" {
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.abi_clerk_lambda.arn}/invocations"
+  uri                     = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.dappbot_api_lambda.arn}/invocations"
  
   request_parameters {
     "integration.request.path.proxy" = "method.request.path.proxy"
@@ -384,4 +436,24 @@ resource "aws_cognito_user_pool_client" "api_client" {
 
   # Allows us to skip the challenge flow for script-based testing
   explicit_auth_flows = ["USER_PASSWORD_AUTH"]
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# SQS QUEUE
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_sqs_queue" "abi_clerk" {
+  name                       = "abi-clerk-queue-${var.subdomain}"
+  message_retention_seconds  = 3600
+  visibility_timeout_seconds = 90
+
+  redrive_policy            = "{\"deadLetterTargetArn\":\"${aws_sqs_queue.abi_clerk_deadletter.arn}\",\"maxReceiveCount\":3}"
+
+  tags = "${local.default_tags}"
+}
+
+resource "aws_sqs_queue" "abi_clerk_deadletter" {
+  name                       = "abi-clerk-deadletter-${var.subdomain}"
+  message_retention_seconds  = 1209600
+
+  tags = "${local.default_tags}"
 }
