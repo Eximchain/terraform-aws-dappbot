@@ -2,6 +2,8 @@ import argparse
 import boto3
 
 NUM_DAPPS_ATTR = 'custom:num_dapps'
+EMAIL_ATTR = 'email'
+EMAIL_VERIFIED_ATTR = 'email_verified'
 
 cognito = boto3.client('cognito-idp')
 
@@ -29,6 +31,14 @@ def create(args):
             {
                 'Name': NUM_DAPPS_ATTR,
                 'Value': args.num_dapps
+            },
+            {
+                'Name': EMAIL_ATTR,
+                'Value': args.username
+            },
+            {
+                'Name': EMAIL_VERIFIED_ATTR,
+                'Value': 'true'
             }
         ]
     }
