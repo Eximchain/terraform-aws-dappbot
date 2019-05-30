@@ -24,6 +24,10 @@ locals {
     cert_arn = "${var.create_wildcard_cert ? element(coalescelist(aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0) : element(coalescelist(data.aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
     image_url = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
     api_gateway_source_arn = "${aws_api_gateway_rest_api.abi_clerk_api.execution_arn}/*/*/*"
+
+    base_lambda_uri = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions"
+    abi_clerk_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.abi_clerk_lambda.arn}/invocations"
+    dapphub_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.dapphub_view_lambda.arn}/invocations"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -337,7 +341,7 @@ resource "aws_api_gateway_integration" "abi_clerk_integration" {
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.dappbot_api_lambda.arn}/invocations"
+  uri                     = "${local.abi_clerk_lambda_uri}"
  
   request_parameters {
     "integration.request.path.proxy" = "method.request.path.proxy"
@@ -375,7 +379,7 @@ resource "aws_api_gateway_integration" "dapphub_integration" {
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.dapphub_view_lambda.arn}/invocations"
+  uri                     = "${local.dapphub_lambda_uri}"
 }
 
 
