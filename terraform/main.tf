@@ -23,6 +23,7 @@ locals {
     created_dns_root = ".${var.root_domain}"
     cert_arn = "${var.create_wildcard_cert ? element(coalescelist(aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0) : element(coalescelist(data.aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
     image_url = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
+    api_gateway_source_arn = "${aws_api_gateway_rest_api.abi_clerk_api.execution_arn}/*/*/*"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -104,7 +105,7 @@ resource "aws_lambda_permission" "api_gateway_invoke_dappbot_api_lambda" {
   principal     = "apigateway.amazonaws.com"
 
   # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
-  source_arn = "${aws_api_gateway_rest_api.abi_clerk_api.execution_arn}/*/*/*"
+  source_arn = "${local.api_gateway_source_arn}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -113,24 +114,21 @@ resource "aws_lambda_permission" "api_gateway_invoke_dappbot_api_lambda" {
 
 # Wait ensures that the role is fully created when Lambda tries to assume it.
 resource "aws_lambda_function" "dapphub_view_lambda" {
-  filename         = "dappbot-api-lambda.zip"
-  function_name    = "dapphub-view-lambda-${var.subdomain}"
+  filename      = "dappbot-api-lambda.zip"
+  function_name = "dapphub-view-lambda-${var.subdomain}"
 
   # TODO: Stop piggy-backing on the other Lambda's permissions, this
   # public fxn should not have all that access.
-  role             = "${aws_iam_role.dappbot_api_lambda_iam.arn}"
+  role = "${aws_iam_role.dappbot_api_lambda_iam.arn}"
 
   handler          = "index.viewHandler"
   source_code_hash = "${base64sha256(file("dappbot-api-lambda.zip"))}"
   runtime          = "nodejs8.10"
-  timeout          = 30
+  timeout          = 5
 
   environment {
     variables {
-      COGNITO_USER_POOL  = "${aws_cognito_user_pool.registered_users.id}"
-      DDB_TABLE          = "${aws_dynamodb_table.dapp_table.id}"
-      DNS_ROOT           = "${local.created_dns_root}"
-      SQS_QUEUE          = "${aws_sqs_queue.abi_clerk.id}"
+      DDB_TABLE = "${aws_dynamodb_table.dapp_table.id}"
     }
   }
 
@@ -146,7 +144,7 @@ resource "aws_lambda_permission" "api_gateway_invoke_dapphub_view_lambda" {
   principal     = "apigateway.amazonaws.com"
 
   # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
-  source_arn = "${aws_api_gateway_rest_api.abi_clerk_api.execution_arn}/*/*/*"
+  source_arn = "${local.api_gateway_source_arn}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
