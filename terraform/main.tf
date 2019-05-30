@@ -20,14 +20,14 @@ locals {
       Application = "AbiClerk"
       ManagedBy   = "Terraform"
     }
-    created_dns_root = ".${var.root_domain}"
-    cert_arn = "${var.create_wildcard_cert ? element(coalescelist(aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0) : element(coalescelist(data.aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
-    image_url = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
+    created_dns_root       = ".${var.root_domain}"
+    cert_arn               = "${var.create_wildcard_cert ? element(coalescelist(aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0) : element(coalescelist(data.aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
+    image_url              = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
     api_gateway_source_arn = "${aws_api_gateway_rest_api.abi_clerk_api.execution_arn}/*/*/*"
 
-    base_lambda_uri = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions"
+    base_lambda_uri      = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions"
     abi_clerk_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.abi_clerk_lambda.arn}/invocations"
-    dapphub_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.dapphub_view_lambda.arn}/invocations"
+    dapphub_lambda_uri   = "${local.base_lambda_uri}/${aws_lambda_function.dapphub_view_lambda.arn}/invocations"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
