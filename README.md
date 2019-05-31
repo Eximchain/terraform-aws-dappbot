@@ -7,7 +7,7 @@ Before `terraform apply`ing this module, the `abi-clerk-builder` image needs to 
 If you know this has already happened, just make sure to fillset `codebuild_image` in `terraform.tfvars` to `[repository-name]:tag` (e.g. `eximchain/abi-clerk:0.4`).
 
 If you need to build the image yourself, first make sure that you set the following NPM auth variables:
-- `NPM_EMAIL`: Email for an account with read access to the `@eximchain/dappsmith` repository.
+- `NPM_EMAIL`: Email for an account with read access to the `@eximchain/dappsmith` NPM package.
 - `NPM_USER`: Username of above account, which is distinct from the email.
 - `NPM_PASS`: Pass of above account.  Make sure to escape any special characters, echo the value to be certain it's what you need it to be.
 

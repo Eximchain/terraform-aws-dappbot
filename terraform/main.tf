@@ -20,9 +20,14 @@ locals {
       Application = "AbiClerk"
       ManagedBy   = "Terraform"
     }
-    created_dns_root = ".${var.root_domain}"
-    cert_arn = "${var.create_wildcard_cert ? element(coalescelist(aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0) : element(coalescelist(data.aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
-    image_url = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
+    created_dns_root       = ".${var.root_domain}"
+    cert_arn               = "${var.create_wildcard_cert ? element(coalescelist(aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0) : element(coalescelist(data.aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
+    image_url              = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
+    api_gateway_source_arn = "${aws_api_gateway_rest_api.dapp_api.execution_arn}/*/*/*"
+
+    base_lambda_uri      = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions"
+    dappbot_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_api_lambda.arn}/invocations"
+    dapphub_lambda_uri   = "${local.base_lambda_uri}/${aws_lambda_function.dapphub_view_lambda.arn}/invocations"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -97,14 +102,53 @@ resource "aws_lambda_function" "dappbot_api_lambda" {
   tags = "${local.default_tags}"
 }
 
-resource "aws_lambda_permission" "api_gateway_invoke_lambda" {
+resource "aws_lambda_permission" "api_gateway_invoke_dappbot_api_lambda" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = "${aws_lambda_function.dappbot_api_lambda.function_name}"
   principal     = "apigateway.amazonaws.com"
 
   # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
-  source_arn = "${aws_api_gateway_rest_api.abi_clerk_api.execution_arn}/*/*/*"
+  source_arn = "${local.api_gateway_source_arn}"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# DAPPHUB VIEW LAMBDA FUNCTION
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Wait ensures that the role is fully created when Lambda tries to assume it.
+resource "aws_lambda_function" "dapphub_view_lambda" {
+  filename      = "dappbot-api-lambda.zip"
+  function_name = "dapphub-view-lambda-${var.subdomain}"
+
+  # TODO: Stop piggy-backing on the other Lambda's permissions, this
+  # public fxn should not have all that access.
+  role = "${aws_iam_role.dappbot_api_lambda_iam.arn}"
+
+  handler          = "index.viewHandler"
+  source_code_hash = "${base64sha256(file("dappbot-api-lambda.zip"))}"
+  runtime          = "nodejs8.10"
+  timeout          = 5
+
+  environment {
+    variables {
+      DDB_TABLE = "${aws_dynamodb_table.dapp_table.id}"
+    }
+  }
+
+  depends_on = ["null_resource.dappbot_api_lambda_wait"]
+
+  tags = "${local.default_tags}"
+}
+
+resource "aws_lambda_permission" "api_gateway_invoke_dapphub_view_lambda" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = "${aws_lambda_function.dapphub_view_lambda.function_name}"
+  principal     = "apigateway.amazonaws.com"
+
+  # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
+  source_arn = "${local.api_gateway_source_arn}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -252,19 +296,34 @@ resource "aws_acm_certificate_validation" "cloudfront_validation" {
 # ---------------------------------------------------------------------------------------------------------------------
 # API GATEWAY
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_api_gateway_rest_api" "abi_clerk_api" {
+resource "aws_api_gateway_rest_api" "dapp_api" {
   name        = "abi-clerk-${var.subdomain}"
-  description = "Proxy to handle requests to the ABI Clerk API"
+  description = "Proxy to handle requests to the Dappbot & Dapphub API"
 }
 
-resource "aws_api_gateway_resource" "abi_clerk_resource" {
-  rest_api_id = "${aws_api_gateway_rest_api.abi_clerk_api.id}"
-  parent_id   = "${aws_api_gateway_rest_api.abi_clerk_api.root_resource_id}"
+
+resource "aws_api_gateway_deployment" "dapp_api_deploy_test_stage" {
+  depends_on = [
+    "aws_api_gateway_integration.dapphub_integration",
+    "aws_api_gateway_integration.dappbot_integration"
+  ]
+
+  rest_api_id = "${aws_api_gateway_rest_api.dapp_api.id}"
+  stage_name  = "test"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# API GATEWAY: DAPPBOT API
+# ---------------------------------------------------------------------------------------------------------------------
+
+resource "aws_api_gateway_resource" "dappbot_resource" {
+  rest_api_id = "${aws_api_gateway_rest_api.dapp_api.id}"
+  parent_id   = "${aws_api_gateway_rest_api.dapp_api.root_resource_id}"
   path_part   = "{proxy+}"
 }
-resource "aws_api_gateway_method" "abi_clerk_method" {
-  rest_api_id   = "${aws_api_gateway_rest_api.abi_clerk_api.id}"
-  resource_id   = "${aws_api_gateway_resource.abi_clerk_resource.id}"
+resource "aws_api_gateway_method" "dappbot_method" {
+  rest_api_id   = "${aws_api_gateway_rest_api.dapp_api.id}"
+  resource_id   = "${aws_api_gateway_resource.dappbot_resource.id}"
   http_method   = "ANY"
 
   authorization = "COGNITO_USER_POOLS"
@@ -274,35 +333,55 @@ resource "aws_api_gateway_method" "abi_clerk_method" {
     "method.request.path.proxy" = true
   }
 }
-resource "aws_api_gateway_integration" "abi_clerk_integration" {
-  rest_api_id = "${aws_api_gateway_rest_api.abi_clerk_api.id}"
-  resource_id = "${aws_api_gateway_resource.abi_clerk_resource.id}"
-  http_method = "${aws_api_gateway_method.abi_clerk_method.http_method}"
+
+resource "aws_api_gateway_integration" "dappbot_integration" {
+  rest_api_id = "${aws_api_gateway_rest_api.dapp_api.id}"
+  resource_id = "${aws_api_gateway_resource.dappbot_resource.id}"
+  http_method = "${aws_api_gateway_method.dappbot_method.http_method}"
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.dappbot_api_lambda.arn}/invocations"
+  uri                     = "${local.dappbot_lambda_uri}"
  
   request_parameters {
     "integration.request.path.proxy" = "method.request.path.proxy"
   }
 }
 
-resource "aws_api_gateway_deployment" "abi_clerk_deploy_test_stage" {
-  depends_on = ["aws_api_gateway_integration.abi_clerk_integration"]
-
-  rest_api_id = "${aws_api_gateway_rest_api.abi_clerk_api.id}"
-  stage_name  = "test"
-}
-
 resource "aws_api_gateway_authorizer" "api_auth" {
   name          = "abi-clerk-auth-${var.subdomain}"
-  rest_api_id   = "${aws_api_gateway_rest_api.abi_clerk_api.id}"
+  rest_api_id   = "${aws_api_gateway_rest_api.dapp_api.id}"
   provider_arns = ["${aws_cognito_user_pool.registered_users.arn}"]
 
   identity_source = "method.request.header.Authorization"
   type            = "COGNITO_USER_POOLS"
 }
+
+# ---------------------------------------------------------------------------------------------------------------------
+# API GATEWAY: DAPPHUB VIEW
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_api_gateway_resource" "dapphub_resource" {
+  rest_api_id = "${aws_api_gateway_rest_api.dapp_api.id}"
+  parent_id   = "${aws_api_gateway_rest_api.dapp_api.root_resource_id}"
+  path_part   = "view"
+}
+resource "aws_api_gateway_method" "dapphub_method" {
+  rest_api_id   = "${aws_api_gateway_rest_api.dapp_api.id}"
+  resource_id   = "${aws_api_gateway_resource.dapphub_resource.id}"
+  http_method   = "ANY"
+
+  authorization = "NONE"
+}
+resource "aws_api_gateway_integration" "dapphub_integration" {
+  rest_api_id = "${aws_api_gateway_rest_api.dapp_api.id}"
+  resource_id = "${aws_api_gateway_resource.dapphub_resource.id}"
+  http_method = "${aws_api_gateway_method.dapphub_method.http_method}"
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = "${local.dapphub_lambda_uri}"
+}
+
 
 # ---------------------------------------------------------------------------------------------------------------------
 # CUSTOM DNS NAME
@@ -313,7 +392,7 @@ resource "aws_api_gateway_domain_name" "domain" {
 }
 
 resource "aws_api_gateway_base_path_mapping" "base_path_mapping" {
-  api_id = "${aws_api_gateway_rest_api.abi_clerk_api.id}"
+  api_id = "${aws_api_gateway_rest_api.dapp_api.id}"
   
   domain_name = "${aws_api_gateway_domain_name.domain.domain_name}"
 }
