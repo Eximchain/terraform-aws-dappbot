@@ -25,9 +25,12 @@ locals {
     wildcard_cert_arn      = "${var.create_wildcard_cert ? element(coalescelist(aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0) : element(coalescelist(data.aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
     provision_api_cert     = "${var.existing_cert_domain == ""}"
     
-    alternate_api_cert_aliases = []
+    alternate_api_cert_aliases = ["${local.dapphub_dns}"]
     all_api_cert_aliases       = "${concat(list(local.api_domain), local.alternate_api_cert_aliases)}"
+    api_cert_arn               = "${element(coalescelist(data.aws_acm_certificate.api_cert.*.arn, aws_acm_certificate.api_cert.*.arn, list("")), 0)}"
 
+    dapphub_dns            = "${var.dapphub_subdomain}.${var.root_domain}"
+    
     image_url              = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
     api_gateway_source_arn = "${aws_api_gateway_rest_api.dapp_api.execution_arn}/*/*/*"
 
@@ -427,7 +430,7 @@ resource "aws_api_gateway_integration" "dapphub_integration" {
 # CUSTOM DNS NAME
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_api_gateway_domain_name" "domain" {
-  certificate_arn = "${element(coalescelist(data.aws_acm_certificate.api_cert.*.arn, aws_acm_certificate.api_cert.*.arn, list("")), 0)}"
+  certificate_arn = "${local.api_cert_arn}"
   domain_name     = "${local.api_domain}"
 
   depends_on = ["aws_acm_certificate_validation.api_cert"]
@@ -577,4 +580,26 @@ resource "aws_sqs_queue" "abi_clerk_deadletter" {
   message_retention_seconds  = 1209600
 
   tags = "${local.default_tags}"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# DAPPHUB WEBSITE
+# ---------------------------------------------------------------------------------------------------------------------
+module "dapphub_website" {
+  source = "git@github.com:eximchain/terraform-aws-static-website.git"
+
+  dns_name          = "${local.dapphub_dns}"
+  domain_root       = "${var.root_domain}"
+
+  website_bucket_name = "dapphub-website-${var.subdomain}"
+  log_bucket_name     = "dapphub-website-logs-${var.subdomain}"
+
+  acm_cert_arn = "${local.api_cert_arn}"
+
+  github_website_repo   = "dapphub-spa"
+  github_website_branch = "${var.dapphub_branch}"
+  deployment_directory  = "build"
+  build_command         = "npm install && npm run build"
+
+  force_destroy_buckets = true
 }
