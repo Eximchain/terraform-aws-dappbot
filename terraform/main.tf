@@ -21,7 +21,13 @@ locals {
       ManagedBy   = "Terraform"
     }
     created_dns_root       = ".${var.root_domain}"
+    api_domain             = "${var.subdomain}.${var.root_domain}"
     wildcard_cert_arn      = "${var.create_wildcard_cert ? element(coalescelist(aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0) : element(coalescelist(data.aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
+    provision_api_cert     = "${var.existing_cert_domain == ""}"
+    
+    alternate_api_cert_aliases = []
+    all_api_cert_aliases       = "${concat(list(local.api_domain), local.alternate_api_cert_aliases)}"
+
     image_url              = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
     api_gateway_source_arn = "${aws_api_gateway_rest_api.dapp_api.execution_arn}/*/*/*"
 
@@ -34,11 +40,6 @@ locals {
 # DATA SOURCES
 # ---------------------------------------------------------------------------------------------------------------------
 data "aws_caller_identity" "current" {}
-
-data "aws_acm_certificate" "cert" {
-  domain      = "${var.root_domain}"
-  most_recent = true
-}
 
 data "aws_route53_zone" "hosted_zone" {
   name = "${var.root_domain}."
@@ -294,6 +295,45 @@ resource "aws_acm_certificate_validation" "cloudfront_validation" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# ACM CERT for API
+# ---------------------------------------------------------------------------------------------------------------------
+data "aws_acm_certificate" "api_cert" {
+  count = "${local.provision_api_cert ? 0 : 1}"
+
+  domain      = "${var.existing_cert_domain}"
+  most_recent = true
+}
+
+resource "aws_acm_certificate" "api_cert" {
+    count = "${local.provision_api_cert ? 1 : 0}"
+
+    domain_name               = "${local.api_domain}"
+    subject_alternative_names = "${local.alternate_api_cert_aliases}"
+    validation_method         = "DNS"
+}
+
+resource "aws_acm_certificate_validation" "api_cert" {
+    count = "${local.provision_api_cert ? 1 : 0}"
+
+    certificate_arn         = "${element(coalescelist(aws_acm_certificate.api_cert.*.arn, list("")), 0)}"
+    validation_record_fqdns = ["${aws_route53_record.api_cert_validation.*.fqdn}"]
+
+    provisioner "local-exec" {
+        command = "sleep 20"
+    }
+}
+
+resource "aws_route53_record" "api_cert_validation" {
+    count = "${local.provision_api_cert ? length(local.all_api_cert_aliases) : 0}"
+
+    name    = "${lookup(aws_acm_certificate.api_cert.domain_validation_options[count.index], "resource_record_name")}"
+    type    = "${lookup(aws_acm_certificate.api_cert.domain_validation_options[count.index], "resource_record_type")}"
+    zone_id = "${data.aws_route53_zone.hosted_zone.zone_id}"
+    records = ["${lookup(aws_acm_certificate.api_cert.domain_validation_options[count.index], "resource_record_value")}"]
+    ttl     = 60
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # API GATEWAY
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_api_gateway_rest_api" "dapp_api" {
@@ -387,8 +427,10 @@ resource "aws_api_gateway_integration" "dapphub_integration" {
 # CUSTOM DNS NAME
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_api_gateway_domain_name" "domain" {
-  certificate_arn = "${data.aws_acm_certificate.cert.arn}"
-  domain_name     = "${var.subdomain}.${var.root_domain}"
+  certificate_arn = "${element(coalescelist(data.aws_acm_certificate.api_cert.*.arn, aws_acm_certificate.api_cert.*.arn, list("")), 0)}"
+  domain_name     = "${local.api_domain}"
+
+  depends_on = ["aws_acm_certificate_validation.api_cert"]
 }
 
 resource "aws_api_gateway_base_path_mapping" "base_path_mapping" {

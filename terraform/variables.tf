@@ -42,6 +42,11 @@ variable "create_wildcard_cert" {
     default     = false
 }
 
+variable "existing_cert_domain" {
+    description = "The Domain of an existing ACM certificate that is valid for all domains the api or any other single-domain resources. Will provision one if not provided."
+    default     = ""
+}
+
 variable "sendgrid_key" {
     description = "Sendgrid API key to be used for sending users confirmation emails."
     default     = ""
