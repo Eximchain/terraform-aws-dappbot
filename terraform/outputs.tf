@@ -3,7 +3,7 @@ output "api_dns" {
 }
 
 output "cloudfront_cert_arn" {
-    value = "${local.cert_arn}"
+    value = "${local.wildcard_cert_arn}"
 }
 
 output "cognito_client_id" {

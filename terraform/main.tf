@@ -21,7 +21,7 @@ locals {
       ManagedBy   = "Terraform"
     }
     created_dns_root       = ".${var.root_domain}"
-    cert_arn               = "${var.create_wildcard_cert ? element(coalescelist(aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0) : element(coalescelist(data.aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
+    wildcard_cert_arn      = "${var.create_wildcard_cert ? element(coalescelist(aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0) : element(coalescelist(data.aws_acm_certificate.cloudfront_cert.*.arn, list("")), 0)}"
     image_url              = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
     api_gateway_source_arn = "${aws_api_gateway_rest_api.dapp_api.execution_arn}/*/*/*"
 
@@ -181,7 +181,7 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
       PIPELINE_ROLE_ARN  = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
       ARTIFACT_BUCKET    = "${aws_s3_bucket.artifact_bucket.id}",
       DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}",
-      CERT_ARN           = "${local.cert_arn}"
+      WILDCARD_CERT_ARN  = "${local.wildcard_cert_arn}"
       COGNITO_USER_POOL  = "${aws_cognito_user_pool.registered_users.id}"
       SENDGRID_API_KEY   = "${var.sendgrid_key}"
     }
