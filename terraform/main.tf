@@ -203,7 +203,6 @@ resource "aws_lambda_permission" "sqs_invoke_lambda" {
   function_name = "${aws_lambda_function.abi_clerk_lambda.function_name}"
   principal     = "sqs.amazonaws.com"
 
-  # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
   source_arn = "${aws_sqs_queue.abi_clerk.arn}"
 }
 
@@ -636,4 +635,58 @@ module "dapphub_website" {
   build_command         = "npm install && npm run build"
 
   force_destroy_buckets = true
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# PERIODIC CLEANUP
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_sns_topic" "cleanup_event" {
+  name = "abi-clerk-cleanup-${var.subdomain}"
+}
+
+resource "aws_cloudwatch_event_rule" "cleanup_timer" {
+  name                = "abi-clerk-cleanup-${var.subdomain}" 
+  schedule_expression = "${var.cleanup_interval}"
+}
+
+resource "aws_cloudwatch_event_target" "sns" {
+  rule      = "${aws_cloudwatch_event_rule.cleanup_timer.name}"
+  target_id = "SendToSNS"
+  arn       = "${aws_sns_topic.cleanup_event.arn}"
+
+  input = "{\"command\":\"cleanup\"}"
+}
+
+resource "aws_sns_topic_subscription" "cleanup_lambda" {
+  topic_arn = "${aws_sns_topic.cleanup_event.arn}"
+  protocol  = "lambda"
+  endpoint  = "${aws_lambda_function.dappbot_service_lambda.arn}"
+}
+
+resource "aws_lambda_permission" "sns_invoke_cleanup_lambda" {
+  statement_id  = "CleanupAllowExecutionFromSns"
+  action        = "lambda:InvokeFunction"
+  function_name = "${aws_lambda_function.dappbot_service_lambda.function_name}"
+  principal     = "sns.amazonaws.com"
+
+  source_arn = "${aws_sns_topic.cleanup_event.arn}"
+}
+
+resource "aws_sns_topic_policy" "default" {
+  arn    = "${aws_sns_topic.cleanup_event.arn}"
+  policy = "${data.aws_iam_policy_document.cleanup_topic_policy.json}"
+}
+
+data "aws_iam_policy_document" "cleanup_topic_policy" {
+  statement {
+    effect  = "Allow"
+    actions = ["SNS:Publish"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["events.amazonaws.com"]
+    }
+
+    resources = ["${aws_sns_topic.cleanup_event.arn}"]
+  }
 }
