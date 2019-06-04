@@ -178,16 +178,17 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
 
   environment {
     variables {
-      DDB_TABLE          = "${aws_dynamodb_table.dapp_table.id}"
-      R53_HOSTED_ZONE_ID = "${data.aws_route53_zone.hosted_zone.zone_id}"
-      DNS_ROOT           = "${local.created_dns_root}"
-      CODEBUILD_ID       = "${aws_codebuild_project.abi_clerk_builder.id}",
-      PIPELINE_ROLE_ARN  = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
-      ARTIFACT_BUCKET    = "${aws_s3_bucket.artifact_bucket.id}",
-      DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}",
-      WILDCARD_CERT_ARN  = "${local.wildcard_cert_arn}"
-      COGNITO_USER_POOL  = "${aws_cognito_user_pool.registered_users.id}"
-      SENDGRID_API_KEY   = "${var.sendgrid_key}"
+      DDB_TABLE                = "${aws_dynamodb_table.dapp_table.id}"
+      R53_HOSTED_ZONE_ID       = "${data.aws_route53_zone.hosted_zone.zone_id}"
+      DNS_ROOT                 = "${local.created_dns_root}"
+      CODEBUILD_ID             = "${aws_codebuild_project.abi_clerk_builder.id}",
+      PIPELINE_ROLE_ARN        = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
+      ARTIFACT_BUCKET          = "${aws_s3_bucket.artifact_bucket.id}",
+      DAPPSEED_BUCKET          = "${aws_s3_bucket.dappseed_bucket.id}",
+      WILDCARD_CERT_ARN        = "${local.wildcard_cert_arn}"
+      COGNITO_USER_POOL        = "${aws_cognito_user_pool.registered_users.id}"
+      SENDGRID_API_KEY         = "${var.sendgrid_key}"
+      SERVICES_LAMBDA_FUNCTION = "${aws_lambda_function.dappbot_service_lambda.function_name}"
     }
   }
 
@@ -211,6 +212,39 @@ resource "aws_lambda_event_source_mapping" "abi_clerk_sqs_event" {
   event_source_arn  = "${aws_sqs_queue.abi_clerk.arn}"
   enabled           = true
   function_name     = "${aws_lambda_function.abi_clerk_lambda.arn}"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# DAPPBOT SERVICES LAMBDA FUNCTION
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_lambda_function" "dappbot_service_lambda" {
+  filename         = "dappbot-service-lambda.zip"
+  function_name    = "dappbot-service-lambda-${var.subdomain}"
+  # TODO: Stop piggy-backing on the other Lambda's permissions
+  role             = "${aws_iam_role.abi_clerk_lambda_iam.arn}"
+  handler          = "index.handler"
+  source_code_hash = "${base64sha256(file("dappbot-service-lambda.zip"))}"
+  runtime          = "nodejs8.10"
+  timeout          = 90
+
+  environment {
+    variables {
+      DDB_TABLE          = "${aws_dynamodb_table.dapp_table.id}"
+      R53_HOSTED_ZONE_ID = "${data.aws_route53_zone.hosted_zone.zone_id}"
+      DNS_ROOT           = "${local.created_dns_root}"
+      CODEBUILD_ID       = "${aws_codebuild_project.abi_clerk_builder.id}",
+      PIPELINE_ROLE_ARN  = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
+      ARTIFACT_BUCKET    = "${aws_s3_bucket.artifact_bucket.id}",
+      DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}",
+      WILDCARD_CERT_ARN  = "${local.wildcard_cert_arn}"
+      COGNITO_USER_POOL  = "${aws_cognito_user_pool.registered_users.id}"
+      SENDGRID_API_KEY   = "${var.sendgrid_key}"
+    }
+  }
+
+  depends_on = ["null_resource.abi_clerk_lambda_wait"]
+
+  tags = "${local.default_tags}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
