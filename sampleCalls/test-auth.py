@@ -2,6 +2,9 @@ import argparse
 import boto3
 
 NUM_DAPPS_ATTR = 'custom:num_dapps'
+STANDARD_LIMIT_ATTR = 'custom:standard_limit'
+PROFESSIONAL_LIMIT_ATTR = 'custom:professional_limit'
+ENTERPRISE_LIMIT_ATTR = 'custom:enterprise_limit'
 EMAIL_ATTR = 'email'
 EMAIL_VERIFIED_ATTR = 'email_verified'
 
@@ -14,6 +17,9 @@ def parse_args():
     parser_create = subparsers.add_parser('create', help='Create a cognito user')
     parser_create.add_argument('--user-pool-id', dest='user_pool_id', required=True)
     parser_create.add_argument('--num-dapps', dest='num_dapps', required=True)
+    parser_create.add_argument('--standard-limit', dest='standard_limit', required=False)
+    parser_create.add_argument('--professional-limit', dest='professional_limit', required=False)
+    parser_create.add_argument('--enterprise-limit', dest='enterprise_limit', required=False)
     parser_create.add_argument('--temp-password', dest='temp_password', default=None)
     parser_delete = subparsers.add_parser('delete', help='Delete a cognito user')
     parser_delete.add_argument('--user-pool-id', dest='user_pool_id', required=True)
@@ -31,6 +37,18 @@ def create(args):
             {
                 'Name': NUM_DAPPS_ATTR,
                 'Value': args.num_dapps
+            },
+            {
+                'Name': STANDARD_LIMIT_ATTR,
+                'Value': args.standard_limit if args.standard_limit else args.num_dapps
+            },
+            {
+                'Name': PROFESSIONAL_LIMIT_ATTR,
+                'Value': args.professional_limit if args.professional_limit else args.num_dapps
+            },
+            {
+                'Name': ENTERPRISE_LIMIT_ATTR,
+                'Value': args.enterprise_limit if args.enterprise_limit else args.num_dapps
             },
             {
                 'Name': EMAIL_ATTR,

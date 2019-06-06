@@ -31,6 +31,14 @@ NUM_DAPPS=<The dapp limit to apply to this user>
 python3 test-auth.py --username $EMAIL create --user-pool-id $USER_POOL_ID --num-dapps $NUM_DAPPS
 ```
 
+By default the `--num-dapps` argument applies to all tiers. You can use an additional optional argument to override `--num-dapps` for a specific tier. For example, to allow `5` standard, `2` professional, and `0` enterprise dapps you could use the following command instead:
+
+```sh
+python3 test-auth.py --username $EMAIL create --user-pool-id $USER_POOL_ID --num-dapps $NUM_DAPPS --standard-limit 5 --professional-limit 2 --enterprise-limit 0
+```
+
+Note that `--num-dapps` must be specified even if all tiers have overrides specified.
+
 ### Change user password
 
 Once you get your temporary password, browse to the `login_url` that was output by Terraform. Log in with your temporary password and set a permanent password. Once your password is set, this user can be used for testing.

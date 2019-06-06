@@ -549,8 +549,57 @@ resource "aws_cognito_user_pool" "registered_users" {
     default_email_option = "CONFIRM_WITH_LINK"
   }
 
+  // Legacy Proof of Concept
   schema {
     name = "num_dapps"
+
+    attribute_data_type      = "Number"
+    developer_only_attribute = false
+    mutable                  = true
+
+    # Custom attributes cannot be required
+    required                 = false
+
+    number_attribute_constraints {
+      min_value = 0
+      max_value = 1000
+    }
+  }
+
+  schema {
+    name = "standard_limit"
+
+    attribute_data_type      = "Number"
+    developer_only_attribute = false
+    mutable                  = true
+
+    # Custom attributes cannot be required
+    required                 = false
+
+    number_attribute_constraints {
+      min_value = 0
+      max_value = 1000
+    }
+  }
+
+  schema {
+    name = "professional_limit"
+
+    attribute_data_type      = "Number"
+    developer_only_attribute = false
+    mutable                  = true
+
+    # Custom attributes cannot be required
+    required                 = false
+
+    number_attribute_constraints {
+      min_value = 0
+      max_value = 1000
+    }
+  }
+
+  schema {
+    name = "enterprise_limit"
 
     attribute_data_type      = "Number"
     developer_only_attribute = false
@@ -588,7 +637,7 @@ resource "aws_cognito_user_pool_client" "api_client" {
 
   supported_identity_providers = ["COGNITO"]
 
-  read_attributes  = ["email", "custom:num_dapps"]
+  read_attributes  = ["email", "custom:num_dapps", "custom:standard_limit", "custom:professional_limit", "custom:enterprise_limit"]
   write_attributes = ["email"]
 
   # Allows us to skip the challenge flow for script-based testing
