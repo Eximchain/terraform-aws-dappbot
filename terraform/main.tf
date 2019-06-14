@@ -182,6 +182,8 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
       R53_HOSTED_ZONE_ID       = "${data.aws_route53_zone.hosted_zone.zone_id}"
       DNS_ROOT                 = "${local.created_dns_root}"
       CODEBUILD_ID             = "${aws_codebuild_project.abi_clerk_builder.id}",
+      CODEBUILD_GENERATE_ID    = "${aws_codebuild_project.abi_clerk_enterprise_generator.id}",
+      CODEBUILD_BUILD_ID       = "${aws_codebuild_project.abi_clerk_enterprise_builder.id}",
       PIPELINE_ROLE_ARN        = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
       ARTIFACT_BUCKET          = "${aws_s3_bucket.artifact_bucket.id}",
       DAPPSEED_BUCKET          = "${aws_s3_bucket.dappseed_bucket.id}",
@@ -189,6 +191,7 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
       COGNITO_USER_POOL        = "${aws_cognito_user_pool.registered_users.id}"
       SENDGRID_API_KEY         = "${var.sendgrid_key}"
       SERVICES_LAMBDA_FUNCTION = "${aws_lambda_function.dappbot_service_lambda.function_name}"
+      GITHUB_TOKEN             = "${var.service_github_token}"
     }
   }
 
@@ -224,7 +227,8 @@ resource "aws_lambda_function" "dappbot_service_lambda" {
   handler          = "index.handler"
   source_code_hash = "${base64sha256(file("dappbot-service-lambda.zip"))}"
   runtime          = "nodejs8.10"
-  timeout          = 90
+  timeout          = 900
+  memory_size      = 256
 
   environment {
     variables {
@@ -238,6 +242,7 @@ resource "aws_lambda_function" "dappbot_service_lambda" {
       WILDCARD_CERT_ARN  = "${local.wildcard_cert_arn}"
       COGNITO_USER_POOL  = "${aws_cognito_user_pool.registered_users.id}"
       SENDGRID_API_KEY   = "${var.sendgrid_key}"
+      GITHUB_TOKEN       = "${var.service_github_token}"
     }
   }
 
@@ -295,6 +300,82 @@ resource "aws_codebuild_project" "abi_clerk_builder" {
 
 data "local_file" "buildspec" {
   filename = "${path.module}/buildspec.yml"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# CODEBUILD PROJECT ENTERPRISE
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_codebuild_project" "abi_clerk_enterprise_generator" {
+  name = "abi-clerk-enterprise-generator-${var.subdomain}"
+  build_timeout = 10
+  service_role = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}"
+
+  environment {
+    type                        = "LINUX_CONTAINER"
+    compute_type                = "BUILD_GENERAL1_MEDIUM"
+    image                       = "${local.image_url}"
+    image_pull_credentials_type = "SERVICE_ROLE"
+
+    environment_variable {
+      name  = "NPM_USER"
+      value = "${var.npm_user}"
+    }
+
+    environment_variable {
+      name  = "NPM_PASS"
+      value = "${var.npm_pass}"
+    }
+
+    environment_variable {
+      name  = "NPM_EMAIL"
+      value = "${var.npm_email}"
+    }
+  }
+
+  artifacts {
+    type = "CODEPIPELINE"
+    encryption_disabled = true
+  }
+
+  source {
+    type = "CODEPIPELINE"
+    buildspec = "${data.local_file.buildspec_enterprise_generate.content}"
+  }
+
+  tags = "${local.default_tags}"
+}
+
+data "local_file" "buildspec_enterprise_generate" {
+  filename = "${path.module}/buildspec-enterprise-generate.yml"
+}
+
+resource "aws_codebuild_project" "abi_clerk_enterprise_builder" {
+  name = "abi-clerk-enterprise-builder-${var.subdomain}"
+  build_timeout = 10
+  service_role = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}"
+
+  environment {
+    type                        = "LINUX_CONTAINER"
+    compute_type                = "BUILD_GENERAL1_MEDIUM"
+    image                       = "${local.image_url}"
+    image_pull_credentials_type = "SERVICE_ROLE"
+  }
+
+  artifacts {
+    type = "CODEPIPELINE"
+    encryption_disabled = true
+  }
+
+  source {
+    type = "CODEPIPELINE"
+    buildspec = "${data.local_file.buildspec_enterprise_build.content}"
+  }
+
+  tags = "${local.default_tags}"
+}
+
+data "local_file" "buildspec_enterprise_build" {
+  filename = "${path.module}/buildspec-enterprise-build.yml"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

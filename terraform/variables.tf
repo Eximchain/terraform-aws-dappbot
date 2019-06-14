@@ -62,6 +62,11 @@ variable "sendgrid_key" {
     default     = ""
 }
 
+variable "service_github_token" {
+    description = "The GitHub token to use to commit source for Enterprise"
+    default     = ""
+}
+
 # If singular, it's 1 hour, 1 minute, 1 week, 1 day, etc.
 variable "cleanup_interval" {
   description = <<DESCRIPTION

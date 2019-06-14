@@ -1,0 +1,13 @@
+version: 0.2
+phases:
+ build:
+   commands:
+    - dappsmith --config config.json --dir dapp
+ post_build:
+   commands:
+    - rm -rf dapp/node_modules
+artifacts:
+  name: BUILD
+  base-directory: dapp
+  files:
+    - '**/*'
