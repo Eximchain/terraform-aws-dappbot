@@ -84,7 +84,7 @@ def login(args):
         print("Password change required, use the Web UI to set your password.")
         return
     id_token = response['AuthenticationResult']['IdToken']
-    print(f'AUTH_TOKEN: {id_token}')
+    print(f'AUTH_TOKEN={id_token}')
 
 # Executes the command specified in the provided argparse namespace
 def execute_command(args):
