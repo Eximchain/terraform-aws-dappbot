@@ -459,14 +459,14 @@ resource "aws_api_gateway_rest_api" "dapp_api" {
 }
 
 
-resource "aws_api_gateway_deployment" "dapp_api_deploy_test_stage" {
+resource "aws_api_gateway_deployment" "dapp_api_deploy_v1" {
   depends_on = [
     "aws_api_gateway_integration.dapphub_integration",
     "aws_api_gateway_integration.dappbot_integration"
   ]
 
   rest_api_id = "${aws_api_gateway_rest_api.dapp_api.id}"
-  stage_name  = "test"
+  stage_name  = "v1"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
