@@ -11,6 +11,8 @@ If you need to build the image yourself, first make sure that you set the follow
 - `NPM_USER`: Username of above account, which is distinct from the email.
 - `NPM_PASS`: Pass of above account.  Make sure to escape any special characters, echo the value to be certain it's what you need it to be.
 
+Check under the "NPM service account" in your 1password shared keys for all npm values.
+
 Before running `packer build abi-clerk-builder.json`, double-check that the `aws_account_id`, `aws_region`, `repository`, and `image_tag` variables are all set to appropriate values.
 
 ## Dev Testing
