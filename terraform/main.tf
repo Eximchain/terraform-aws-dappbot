@@ -730,6 +730,38 @@ resource "aws_cognito_user_pool" "registered_users" {
     }
   }
 
+  schema {
+    name = "payment_provider"
+
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+
+    # Custom attributes cannot be required
+    required                 = false
+
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 32
+    }
+  }
+
+  schema {
+    name = "payment_status"
+
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+
+    # Custom attributes cannot be required
+    required                 = false
+
+    string_attribute_constraints {
+      min_length = 0
+      max_length = 32
+    }
+  }
+
   tags = "${local.default_tags}"
 }
 
