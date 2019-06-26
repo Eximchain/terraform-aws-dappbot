@@ -608,17 +608,12 @@ resource "aws_route53_record" "example" {
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_dynamodb_table" "dapp_table" {
   name           = "dappbot-dapps-${var.subdomain}"
-  billing_mode   = "PROVISIONED"
-  read_capacity  = 1
-  write_capacity = 1
+  billing_mode   = "PAY_PER_REQUEST"
   hash_key       = "DappName"
 
   global_secondary_index {
     name     = "OwnerEmailIndex"
     hash_key = "OwnerEmail"
-
-    write_capacity = 1
-    read_capacity  = 1
 
     projection_type = "ALL"
   }
