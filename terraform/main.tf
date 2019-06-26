@@ -300,7 +300,7 @@ resource "aws_codebuild_project" "dappbot_builder" {
 }
 
 data "local_file" "buildspec" {
-  filename = "${path.module}/buildspec.yml"
+  filename = "${path.module}/codebuild-specs/buildspec.yml"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -347,7 +347,7 @@ resource "aws_codebuild_project" "dappbot_enterprise_generator" {
 }
 
 data "local_file" "buildspec_enterprise_generate" {
-  filename = "${path.module}/buildspec-enterprise-generate.yml"
+  filename = "${path.module}/codebuild-specs/buildspec-enterprise-generate.yml"
 }
 
 resource "aws_codebuild_project" "dappbot_enterprise_builder" {
@@ -376,7 +376,7 @@ resource "aws_codebuild_project" "dappbot_enterprise_builder" {
 }
 
 data "local_file" "buildspec_enterprise_build" {
-  filename = "${path.module}/buildspec-enterprise-build.yml"
+  filename = "${path.module}/codebuild-specs/buildspec-enterprise-build.yml"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
