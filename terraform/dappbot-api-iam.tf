@@ -130,7 +130,7 @@ data "aws_iam_policy_document" "dappbot_api_allow_sqs" {
     actions = [
       "sqs:SendMessage"
     ]
-    resources = ["${aws_sqs_queue.abi_clerk.arn}"]
+    resources = ["${aws_sqs_queue.dappbot.arn}"]
   }
 }
 

@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------------------------------------------------------------
 # CODEPIPELINE IAM ROLE
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_iam_role" "abi_clerk_codepipeline_iam" {
-  name = "abi-clerk-codepipeline-role-${var.subdomain}"
+resource "aws_iam_role" "dappbot_codepipeline_iam" {
+  name = "dappbot-codepipeline-role-${var.subdomain}"
 
   assume_role_policy = <<EOF
 {
@@ -33,13 +33,13 @@ EOF
 # CODEPIPELINE IAM ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "codepipeline" {
-  name = "allow-s3-abi-clerk-codepipeline-${var.subdomain}"
+  name = "allow-s3-dappbot-codepipeline-${var.subdomain}"
 
   policy = "${data.aws_iam_policy_document.codepipeline.json}"
 }
 
 resource "aws_iam_role_policy_attachment" "codepipeline" {
-  role       = "${aws_iam_role.abi_clerk_codepipeline_iam.id}"
+  role       = "${aws_iam_role.dappbot_codepipeline_iam.id}"
   policy_arn = "${aws_iam_policy.codepipeline.arn}"
 }
 

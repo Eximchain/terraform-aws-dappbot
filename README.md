@@ -1,10 +1,10 @@
-# terraform-aws-abi-clerk
-Terraform infrastructure to run ABI Clerk
+# terraform-aws-dappbot
+Terraform infrastructure to run DappBot
 
 ## Deployment
-Before `terraform apply`ing this module, the `abi-clerk-builder` image needs to have been built into an [Amazon ECR](https://aws.amazon.com/ecr/) repository.  
+Before `terraform apply`ing this module, the `dappsmith-builder` image needs to have been built into an [Amazon ECR](https://aws.amazon.com/ecr/) repository.  
 
-If you know this has already happened, just make sure to fillset `codebuild_image` in `terraform.tfvars` to `[repository-name]:tag` (e.g. `eximchain/abi-clerk:0.4`).
+If you know this has already happened, just make sure to fillset `codebuild_image` in `terraform.tfvars` to `[repository-name]:tag` (e.g. `eximchain/dappsmith-builder:0.4`).
 
 If you need to build the image yourself, first make sure that you set the following NPM auth variables:
 - `NPM_EMAIL`: Email for an account with read access to the `@eximchain/dappsmith` NPM package.
@@ -13,7 +13,7 @@ If you need to build the image yourself, first make sure that you set the follow
 
 Check under the "NPM service account" in your 1password shared keys for all npm values.
 
-Before running `packer build abi-clerk-builder.json`, double-check that the `aws_account_id`, `aws_region`, `repository`, and `image_tag` variables are all set to appropriate values.
+Before running `packer build dappsmith-builder.json`, double-check that the `aws_account_id`, `aws_region`, `repository`, and `image_tag` variables are all set to appropriate values.
 
 ## Dev Testing
 

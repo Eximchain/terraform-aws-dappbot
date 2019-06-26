@@ -1,0 +1,49 @@
+{
+  "variables": {
+    "npm_user"       : "{{env `NPM_USER`}}",
+    "npm_pass"       : "{{env `NPM_PASS`}}",
+    "npm_email"      : "{{env `NPM_EMAIL`}}",
+    "aws_account_id" : "984931625683",
+    "aws_region"     : "us-east-1",
+    "repository"     : "eximchain/dappsmith-builder",
+    "image_tag"      : "0.4"
+  },
+  "builders" : [
+    {
+      "type": "docker",
+      "image": "node:10.15",
+      "commit": true
+    }
+  ],
+  "provisioners" : [
+    {
+      "type": "shell",
+      "inline": [
+        "npm i -g npm-cli-login typescript create-react-app",
+        "npm-cli-login -u {{user `npm_user`}} -p {{user `npm_pass`}} -e {{user `npm_email`}}",
+        "npm cache verify",
+        "npm i -g --unsafe --verbose @eximchain/dappsmith",
+        "npm cache verify"
+      ]
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "manifest",
+      "output": "manifests/dappsmith-builder.json",
+      "strip_path": true
+    },
+    [
+      {
+        "type": "docker-tag",
+        "repository": "{{user `aws_account_id`}}.dkr.ecr.{{user `aws_region`}}.amazonaws.com/{{user `repository`}}",
+        "tag": "{{user `image_tag`}}"
+      },
+      {
+        "type": "docker-push",
+        "ecr_login": true,
+        "login_server": "https://{{user `aws_account_id`}}.dkr.ecr.{{user `aws_region`}}.amazonaws.com/"
+      }
+    ]
+  ]
+}

@@ -15,9 +15,9 @@ provider "null" {
 }
 
 locals {
-    s3_bucket_arn_pattern = "arn:aws:s3:::exim-abi-clerk-*"
+    s3_bucket_arn_pattern = "arn:aws:s3:::exim-dappbot-*"
     default_tags {
-      Application = "AbiClerk"
+      Application = "DappBot"
       ManagedBy   = "Terraform"
     }
     created_dns_root       = ".${var.root_domain}"
@@ -52,7 +52,7 @@ data "aws_route53_zone" "hosted_zone" {
 # SHARED S3 BUCKETS & KEY
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_s3_bucket" "artifact_bucket" {
-  bucket        = "abi-clerk-artifacts-${var.subdomain}"
+  bucket        = "dappbot-artifacts-${var.subdomain}"
   acl           = "private"
   force_destroy = true
 
@@ -60,7 +60,7 @@ resource "aws_s3_bucket" "artifact_bucket" {
 }
 
 resource "aws_s3_bucket" "dappseed_bucket" {
-  bucket        = "abi-clerk-dappseeds-${var.subdomain}"
+  bucket        = "dappbot-dappseeds-${var.subdomain}"
   acl           = "private"
   force_destroy = true
 
@@ -97,7 +97,7 @@ resource "aws_lambda_function" "dappbot_api_lambda" {
       COGNITO_USER_POOL  = "${aws_cognito_user_pool.registered_users.id}"
       DDB_TABLE          = "${aws_dynamodb_table.dapp_table.id}"
       DNS_ROOT           = "${local.created_dns_root}"
-      SQS_QUEUE          = "${aws_sqs_queue.abi_clerk.id}"
+      SQS_QUEUE          = "${aws_sqs_queue.dappbot.id}"
     }
   }
 
@@ -156,23 +156,24 @@ resource "aws_lambda_permission" "api_gateway_invoke_dapphub_view_lambda" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# ABI CLERK LAMBDA FUNCTION
+# DAPPBOT LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
 
 # Wait ensures that the role is fully created when Lambda tries to assume it.
-resource "null_resource" "abi_clerk_lambda_wait" {
+resource "null_resource" "dappbot_lambda_wait" {
   provisioner "local-exec" {
     command = "sleep 10"
   }
-  depends_on = ["aws_iam_role.abi_clerk_lambda_iam"]
+  depends_on = ["aws_iam_role.dappbot_lambda_iam"]
 }
 
-resource "aws_lambda_function" "abi_clerk_lambda" {
-  filename         = "abi-clerk-lambda.zip"
-  function_name    = "abi-clerk-lambda-${var.subdomain}"
-  role             = "${aws_iam_role.abi_clerk_lambda_iam.arn}"
+resource "aws_lambda_function" "dappbot_manager_lambda" {
+  filename         = "dappbot-manager-lambda.zip"
+  function_name    = "dappbot-manager-${var.subdomain}"
+  # TODO: Split Permissions
+  role             = "${aws_iam_role.dappbot_lambda_iam.arn}"
   handler          = "index.handler"
-  source_code_hash = "${base64sha256(file("abi-clerk-lambda.zip"))}"
+  source_code_hash = "${base64sha256(file("dappbot-manager-lambda.zip"))}"
   runtime          = "nodejs8.10"
   timeout          = 90
 
@@ -181,21 +182,21 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
       DDB_TABLE                = "${aws_dynamodb_table.dapp_table.id}"
       R53_HOSTED_ZONE_ID       = "${data.aws_route53_zone.hosted_zone.zone_id}"
       DNS_ROOT                 = "${local.created_dns_root}"
-      CODEBUILD_ID             = "${aws_codebuild_project.abi_clerk_builder.id}",
-      CODEBUILD_GENERATE_ID    = "${aws_codebuild_project.abi_clerk_enterprise_generator.id}",
-      CODEBUILD_BUILD_ID       = "${aws_codebuild_project.abi_clerk_enterprise_builder.id}",
-      PIPELINE_ROLE_ARN        = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
+      CODEBUILD_ID             = "${aws_codebuild_project.dappbot_builder.id}",
+      CODEBUILD_GENERATE_ID    = "${aws_codebuild_project.dappbot_enterprise_generator.id}",
+      CODEBUILD_BUILD_ID       = "${aws_codebuild_project.dappbot_enterprise_builder.id}",
+      PIPELINE_ROLE_ARN        = "${aws_iam_role.dappbot_codepipeline_iam.arn}",
       ARTIFACT_BUCKET          = "${aws_s3_bucket.artifact_bucket.id}",
       DAPPSEED_BUCKET          = "${aws_s3_bucket.dappseed_bucket.id}",
       WILDCARD_CERT_ARN        = "${local.wildcard_cert_arn}"
       COGNITO_USER_POOL        = "${aws_cognito_user_pool.registered_users.id}"
       SENDGRID_API_KEY         = "${var.sendgrid_key}"
-      SERVICES_LAMBDA_FUNCTION = "${aws_lambda_function.dappbot_service_lambda.function_name}"
+      SERVICES_LAMBDA_FUNCTION = "${aws_lambda_function.dappbot_event_listener_lambda.function_name}"
       GITHUB_TOKEN             = "${var.service_github_token}"
     }
   }
 
-  depends_on = ["null_resource.abi_clerk_lambda_wait"]
+  depends_on = ["null_resource.dappbot_lambda_wait"]
 
   tags = "${local.default_tags}"
 }
@@ -203,29 +204,29 @@ resource "aws_lambda_function" "abi_clerk_lambda" {
 resource "aws_lambda_permission" "sqs_invoke_lambda" {
   statement_id  = "SqsAllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
-  function_name = "${aws_lambda_function.abi_clerk_lambda.function_name}"
+  function_name = "${aws_lambda_function.dappbot_manager_lambda.function_name}"
   principal     = "sqs.amazonaws.com"
 
-  source_arn = "${aws_sqs_queue.abi_clerk.arn}"
+  source_arn = "${aws_sqs_queue.dappbot.arn}"
 }
 
-resource "aws_lambda_event_source_mapping" "abi_clerk_sqs_event" {
+resource "aws_lambda_event_source_mapping" "dappbot_sqs_event" {
   batch_size        = 1
-  event_source_arn  = "${aws_sqs_queue.abi_clerk.arn}"
+  event_source_arn  = "${aws_sqs_queue.dappbot.arn}"
   enabled           = true
-  function_name     = "${aws_lambda_function.abi_clerk_lambda.arn}"
+  function_name     = "${aws_lambda_function.dappbot_manager_lambda.arn}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
 # DAPPBOT SERVICES LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_lambda_function" "dappbot_service_lambda" {
-  filename         = "dappbot-service-lambda.zip"
-  function_name    = "dappbot-service-lambda-${var.subdomain}"
+resource "aws_lambda_function" "dappbot_event_listener_lambda" {
+  filename         = "dappbot-event-listener-lambda.zip"
+  function_name    = "dappbot-event-listener-lambda-${var.subdomain}"
   # TODO: Stop piggy-backing on the other Lambda's permissions
-  role             = "${aws_iam_role.abi_clerk_lambda_iam.arn}"
+  role             = "${aws_iam_role.dappbot_lambda_iam.arn}"
   handler          = "index.handler"
-  source_code_hash = "${base64sha256(file("dappbot-service-lambda.zip"))}"
+  source_code_hash = "${base64sha256(file("dappbot-event-listener-lambda.zip"))}"
   runtime          = "nodejs8.10"
   timeout          = 900
   memory_size      = 256
@@ -235,8 +236,8 @@ resource "aws_lambda_function" "dappbot_service_lambda" {
       DDB_TABLE          = "${aws_dynamodb_table.dapp_table.id}"
       R53_HOSTED_ZONE_ID = "${data.aws_route53_zone.hosted_zone.zone_id}"
       DNS_ROOT           = "${local.created_dns_root}"
-      CODEBUILD_ID       = "${aws_codebuild_project.abi_clerk_builder.id}",
-      PIPELINE_ROLE_ARN  = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}",
+      CODEBUILD_ID       = "${aws_codebuild_project.dappbot_builder.id}",
+      PIPELINE_ROLE_ARN  = "${aws_iam_role.dappbot_codepipeline_iam.arn}",
       ARTIFACT_BUCKET    = "${aws_s3_bucket.artifact_bucket.id}",
       DAPPSEED_BUCKET    = "${aws_s3_bucket.dappseed_bucket.id}",
       WILDCARD_CERT_ARN  = "${local.wildcard_cert_arn}"
@@ -246,7 +247,7 @@ resource "aws_lambda_function" "dappbot_service_lambda" {
     }
   }
 
-  depends_on = ["null_resource.abi_clerk_lambda_wait"]
+  depends_on = ["null_resource.dappbot_lambda_wait"]
 
   tags = "${local.default_tags}"
 }
@@ -258,10 +259,10 @@ resource "aws_lambda_function" "dappbot_service_lambda" {
 # ---------------------------------------------------------------------------------------------------------------------
 # CODEBUILD PROJECT
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_codebuild_project" "abi_clerk_builder" {
-  name = "abi-clerk-builder-${var.subdomain}"
+resource "aws_codebuild_project" "dappbot_builder" {
+  name = "dappbot-builder-${var.subdomain}"
   build_timeout = 10
-  service_role = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}"
+  service_role = "${aws_iam_role.dappbot_codepipeline_iam.arn}"
 
   environment {
     type                        = "LINUX_CONTAINER"
@@ -305,10 +306,10 @@ data "local_file" "buildspec" {
 # ---------------------------------------------------------------------------------------------------------------------
 # CODEBUILD PROJECT ENTERPRISE
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_codebuild_project" "abi_clerk_enterprise_generator" {
-  name = "abi-clerk-enterprise-generator-${var.subdomain}"
+resource "aws_codebuild_project" "dappbot_enterprise_generator" {
+  name = "dappbot-enterprise-generator-${var.subdomain}"
   build_timeout = 10
-  service_role = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}"
+  service_role = "${aws_iam_role.dappbot_codepipeline_iam.arn}"
 
   environment {
     type                        = "LINUX_CONTAINER"
@@ -349,10 +350,10 @@ data "local_file" "buildspec_enterprise_generate" {
   filename = "${path.module}/buildspec-enterprise-generate.yml"
 }
 
-resource "aws_codebuild_project" "abi_clerk_enterprise_builder" {
-  name = "abi-clerk-enterprise-builder-${var.subdomain}"
+resource "aws_codebuild_project" "dappbot_enterprise_builder" {
+  name = "dappbot-enterprise-builder-${var.subdomain}"
   build_timeout = 10
-  service_role = "${aws_iam_role.abi_clerk_codepipeline_iam.arn}"
+  service_role = "${aws_iam_role.dappbot_codepipeline_iam.arn}"
 
   environment {
     type                        = "LINUX_CONTAINER"
@@ -454,7 +455,7 @@ resource "aws_route53_record" "api_cert_validation" {
 # API GATEWAY
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_api_gateway_rest_api" "dapp_api" {
-  name        = "abi-clerk-${var.subdomain}"
+  name        = "dappbot-${var.subdomain}"
   description = "Proxy to handle requests to the Dappbot & Dapphub API"
 }
 
@@ -532,7 +533,7 @@ resource "aws_api_gateway_integration" "dappbot_private_list_integration" {
 }
 
 resource "aws_api_gateway_authorizer" "api_auth" {
-  name          = "abi-clerk-auth-${var.subdomain}"
+  name          = "dappbot-auth-${var.subdomain}"
   rest_api_id   = "${aws_api_gateway_rest_api.dapp_api.id}"
   provider_arns = ["${aws_cognito_user_pool.registered_users.arn}"]
 
@@ -606,7 +607,7 @@ resource "aws_route53_record" "example" {
 # DYNAMODB TABLES
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_dynamodb_table" "dapp_table" {
-  name           = "abi-clerk-dapps-${var.subdomain}"
+  name           = "dappbot-dapps-${var.subdomain}"
   billing_mode   = "PROVISIONED"
   read_capacity  = 1
   write_capacity = 1
@@ -642,7 +643,7 @@ locals {
   redirect_uri = "https://www.eximchain.com"
 }
 resource "aws_cognito_user_pool" "registered_users" {
-  name = "abi-clerk-users-${var.subdomain}"
+  name = "dappbot-users-${var.subdomain}"
 
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
@@ -733,12 +734,12 @@ resource "aws_cognito_user_pool" "registered_users" {
 }
 
 resource "aws_cognito_user_pool_domain" "cognito_domain" {
-  domain       = "eximtest-abi-clerk-${var.subdomain}"
+  domain       = "dappbot-${var.subdomain}"
   user_pool_id = "${aws_cognito_user_pool.registered_users.id}"
 }
 
 resource "aws_cognito_user_pool_client" "api_client" {
-  name         = "abi-clerk-client-${var.subdomain}"
+  name         = "dappbot-client-${var.subdomain}"
   user_pool_id = "${aws_cognito_user_pool.registered_users.id}"
 
   allowed_oauth_flows  = ["code", "implicit"]
@@ -762,18 +763,18 @@ resource "aws_cognito_user_pool_client" "api_client" {
 # ---------------------------------------------------------------------------------------------------------------------
 # SQS QUEUE
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_sqs_queue" "abi_clerk" {
-  name                       = "abi-clerk-queue-${var.subdomain}"
+resource "aws_sqs_queue" "dappbot" {
+  name                       = "dappbot-queue-${var.subdomain}"
   message_retention_seconds  = 3600
   visibility_timeout_seconds = 90
 
-  redrive_policy            = "{\"deadLetterTargetArn\":\"${aws_sqs_queue.abi_clerk_deadletter.arn}\",\"maxReceiveCount\":3}"
+  redrive_policy            = "{\"deadLetterTargetArn\":\"${aws_sqs_queue.dappbot_deadletter.arn}\",\"maxReceiveCount\":3}"
 
   tags = "${local.default_tags}"
 }
 
-resource "aws_sqs_queue" "abi_clerk_deadletter" {
-  name                       = "abi-clerk-deadletter-${var.subdomain}"
+resource "aws_sqs_queue" "dappbot_deadletter" {
+  name                       = "dappbot-deadletter-${var.subdomain}"
   message_retention_seconds  = 1209600
 
   tags = "${local.default_tags}"
@@ -805,11 +806,11 @@ module "dapphub_website" {
 # PERIODIC CLEANUP
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_sns_topic" "cleanup_event" {
-  name = "abi-clerk-cleanup-${var.subdomain}"
+  name = "dappbot-cleanup-${var.subdomain}"
 }
 
 resource "aws_cloudwatch_event_rule" "cleanup_timer" {
-  name                = "abi-clerk-cleanup-${var.subdomain}" 
+  name                = "dappbot-cleanup-${var.subdomain}" 
   schedule_expression = "${var.cleanup_interval}"
 }
 
@@ -824,13 +825,13 @@ resource "aws_cloudwatch_event_target" "sns" {
 resource "aws_sns_topic_subscription" "cleanup_lambda" {
   topic_arn = "${aws_sns_topic.cleanup_event.arn}"
   protocol  = "lambda"
-  endpoint  = "${aws_lambda_function.dappbot_service_lambda.arn}"
+  endpoint  = "${aws_lambda_function.dappbot_event_listener_lambda.arn}"
 }
 
 resource "aws_lambda_permission" "sns_invoke_cleanup_lambda" {
   statement_id  = "CleanupAllowExecutionFromSns"
   action        = "lambda:InvokeFunction"
-  function_name = "${aws_lambda_function.dappbot_service_lambda.function_name}"
+  function_name = "${aws_lambda_function.dappbot_event_listener_lambda.function_name}"
   principal     = "sns.amazonaws.com"
 
   source_arn = "${aws_sns_topic.cleanup_event.arn}"
