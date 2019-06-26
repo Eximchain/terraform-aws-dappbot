@@ -90,7 +90,7 @@ resource "aws_lambda_function" "dappbot_api_lambda" {
   handler          = "index.privateHandler"
   source_code_hash = "${base64sha256(file("dappbot-api-lambda.zip"))}"
   runtime          = "nodejs8.10"
-  timeout          = 30
+  timeout          = 10
 
   environment {
     variables {
