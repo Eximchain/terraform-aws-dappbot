@@ -175,7 +175,7 @@ resource "aws_lambda_function" "dappbot_manager_lambda" {
   handler          = "index.handler"
   source_code_hash = "${base64sha256(file("dappbot-manager-lambda.zip"))}"
   runtime          = "nodejs8.10"
-  timeout          = 90
+  timeout          = 60
 
   environment {
     variables {
@@ -797,7 +797,7 @@ resource "aws_cognito_user_pool_client" "api_client" {
 resource "aws_sqs_queue" "dappbot" {
   name                       = "dappbot-queue-${var.subdomain}"
   message_retention_seconds  = 3600
-  visibility_timeout_seconds = 90
+  visibility_timeout_seconds = 60
 
   redrive_policy            = "{\"deadLetterTargetArn\":\"${aws_sqs_queue.dappbot_deadletter.arn}\",\"maxReceiveCount\":3}"
 
