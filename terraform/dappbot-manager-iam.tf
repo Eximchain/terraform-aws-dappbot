@@ -351,6 +351,9 @@ data "aws_iam_policy_document" "dappbot_allow_sqs" {
       "sqs:GetQueueAttributes",
       "sqs:ChangeMessageVisibility"
     ]
-    resources = ["${aws_sqs_queue.dappbot.arn}"]
+    resources = [
+      "${aws_sqs_queue.dappbot.arn}",
+      "${aws_sqs_queue.dappbot_deadletter.arn}"
+    ]
   }
 }

@@ -156,7 +156,7 @@ resource "aws_lambda_permission" "api_gateway_invoke_dapphub_view_lambda" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# DAPPBOT LAMBDA FUNCTION
+# DAPPBOT MANAGER LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
 
 # Wait ensures that the role is fully created when Lambda tries to assume it.
@@ -215,6 +215,59 @@ resource "aws_lambda_event_source_mapping" "dappbot_sqs_event" {
   event_source_arn  = "${aws_sqs_queue.dappbot.arn}"
   enabled           = true
   function_name     = "${aws_lambda_function.dappbot_manager_lambda.arn}"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# DAPPBOT MANAGER DEAD LETTER FUNCTION
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_lambda_function" "dappbot_manager_dead_letter_lambda" {
+  filename         = "dappbot-manager-lambda.zip"
+  function_name    = "dappbot-manager-deadletter-${var.subdomain}"
+  # TODO: Split Permissions
+  role             = "${aws_iam_role.dappbot_lambda_iam.arn}"
+  handler          = "index.deadLetterHandler"
+  source_code_hash = "${base64sha256(file("dappbot-manager-lambda.zip"))}"
+  runtime          = "nodejs8.10"
+  timeout          = 30
+
+  environment {
+    variables {
+      DDB_TABLE                = "${aws_dynamodb_table.dapp_table.id}"
+      R53_HOSTED_ZONE_ID       = "${data.aws_route53_zone.hosted_zone.zone_id}"
+      DNS_ROOT                 = "${local.created_dns_root}"
+      CODEBUILD_ID             = "${aws_codebuild_project.dappbot_builder.id}",
+      CODEBUILD_GENERATE_ID    = "${aws_codebuild_project.dappbot_enterprise_generator.id}",
+      CODEBUILD_BUILD_ID       = "${aws_codebuild_project.dappbot_enterprise_builder.id}",
+      PIPELINE_ROLE_ARN        = "${aws_iam_role.dappbot_codepipeline_iam.arn}",
+      ARTIFACT_BUCKET          = "${aws_s3_bucket.artifact_bucket.id}",
+      DAPPSEED_BUCKET          = "${aws_s3_bucket.dappseed_bucket.id}",
+      WILDCARD_CERT_ARN        = "${local.wildcard_cert_arn}"
+      COGNITO_USER_POOL        = "${aws_cognito_user_pool.registered_users.id}"
+      SENDGRID_API_KEY         = "${var.sendgrid_key}"
+      SERVICES_LAMBDA_FUNCTION = "${aws_lambda_function.dappbot_event_listener_lambda.function_name}"
+      GITHUB_TOKEN             = "${var.service_github_token}"
+    }
+  }
+
+  depends_on = ["null_resource.dappbot_lambda_wait"]
+
+  tags = "${local.default_tags}"
+}
+
+resource "aws_lambda_permission" "sqs_invoke_dead_letter_lambda" {
+  statement_id  = "SqsAllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = "${aws_lambda_function.dappbot_manager_dead_letter_lambda.function_name}"
+  principal     = "sqs.amazonaws.com"
+
+  source_arn = "${aws_sqs_queue.dappbot.arn}"
+}
+
+resource "aws_lambda_event_source_mapping" "dappbot_dead_letter_sqs_event" {
+  batch_size        = 1
+  event_source_arn  = "${aws_sqs_queue.dappbot_deadletter.arn}"
+  enabled           = true
+  function_name     = "${aws_lambda_function.dappbot_manager_dead_letter_lambda.arn}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -807,6 +860,7 @@ resource "aws_sqs_queue" "dappbot" {
 resource "aws_sqs_queue" "dappbot_deadletter" {
   name                       = "dappbot-deadletter-${var.subdomain}"
   message_retention_seconds  = 1209600
+  visibility_timeout_seconds = 30
 
   tags = "${local.default_tags}"
 }
