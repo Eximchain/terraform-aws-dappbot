@@ -220,7 +220,7 @@ resource "aws_lambda_event_source_mapping" "dappbot_sqs_event" {
 # ---------------------------------------------------------------------------------------------------------------------
 # DAPPBOT MANAGER DEAD LETTER FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_lambda_function" "dappbot_manager_dead_letter_lambda" {
+resource "aws_lambda_function" "dappbot_manager_deadletter_lambda" {
   filename         = "dappbot-manager-lambda.zip"
   function_name    = "dappbot-manager-deadletter-${var.subdomain}"
   # TODO: Split Permissions
@@ -254,20 +254,20 @@ resource "aws_lambda_function" "dappbot_manager_dead_letter_lambda" {
   tags = "${local.default_tags}"
 }
 
-resource "aws_lambda_permission" "sqs_invoke_dead_letter_lambda" {
+resource "aws_lambda_permission" "sqs_invoke_deadletter_lambda" {
   statement_id  = "SqsAllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
-  function_name = "${aws_lambda_function.dappbot_manager_dead_letter_lambda.function_name}"
+  function_name = "${aws_lambda_function.dappbot_manager_deadletter_lambda.function_name}"
   principal     = "sqs.amazonaws.com"
 
   source_arn = "${aws_sqs_queue.dappbot.arn}"
 }
 
-resource "aws_lambda_event_source_mapping" "dappbot_dead_letter_sqs_event" {
+resource "aws_lambda_event_source_mapping" "dappbot_deadletter_sqs_event" {
   batch_size        = 1
   event_source_arn  = "${aws_sqs_queue.dappbot_deadletter.arn}"
   enabled           = true
-  function_name     = "${aws_lambda_function.dappbot_manager_dead_letter_lambda.arn}"
+  function_name     = "${aws_lambda_function.dappbot_manager_deadletter_lambda.arn}"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
