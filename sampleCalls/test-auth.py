@@ -5,6 +5,8 @@ NUM_DAPPS_ATTR = 'custom:num_dapps'
 STANDARD_LIMIT_ATTR = 'custom:standard_limit'
 PROFESSIONAL_LIMIT_ATTR = 'custom:professional_limit'
 ENTERPRISE_LIMIT_ATTR = 'custom:enterprise_limit'
+PAYMENT_PROVIDER_ATTR = 'custom:payment_provider'
+PAYMENT_STATUS_ATTR = 'custom:payment_status'
 EMAIL_ATTR = 'email'
 EMAIL_VERIFIED_ATTR = 'email_verified'
 
@@ -49,6 +51,14 @@ def create(args):
             {
                 'Name': ENTERPRISE_LIMIT_ATTR,
                 'Value': args.enterprise_limit if args.enterprise_limit else args.num_dapps
+            },
+            {
+                'Name': PAYMENT_PROVIDER_ATTR,
+                'Value': 'ADMIN'
+            },
+            {
+                'Name': PAYMENT_STATUS_ATTR,
+                'Value': 'ACTIVE'
             },
             {
                 'Name': EMAIL_ATTR,
