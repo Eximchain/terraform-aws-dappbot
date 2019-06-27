@@ -463,7 +463,11 @@ resource "aws_api_gateway_rest_api" "dapp_api" {
 resource "aws_api_gateway_deployment" "dapp_api_deploy_v1" {
   depends_on = [
     "aws_api_gateway_integration.dapphub_integration",
-    "aws_api_gateway_integration.dappbot_integration"
+    "aws_api_gateway_integration.dappbot_integration",
+    "aws_api_gateway_integration.dappbot_private_list_integration",
+    "aws_api_gateway_method.dapphub_method",
+    "aws_api_gateway_method.dappbot_method",
+    "aws_api_gateway_method.dappbot_private_list_method"
   ]
 
   rest_api_id = "${aws_api_gateway_rest_api.dapp_api.id}"
