@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------------------------------------------------------------
-# IAM FOR DAPPBOT API
+# IAM FOR DAPPBOT PRIVATE API
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_iam_role" "dappbot_api_lambda_iam" {
-  name = "dappbot-api-lambda-iam-${var.subdomain}"
+resource "aws_iam_role" "dappbot_private_api_iam" {
+  name = "dappbot-api-private-iam-${var.subdomain}"
 
   assume_role_policy = "${data.aws_iam_policy_document.dappbot_api_lambda_assume_role.json}"
 
@@ -35,7 +35,7 @@ resource "aws_iam_policy" "dappbot_api_allow_dynamodb" {
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_api_allow_dynamodb" {
-  role       = "${aws_iam_role.dappbot_api_lambda_iam.id}"
+  role       = "${aws_iam_role.dappbot_private_api_iam.id}"
   policy_arn = "${aws_iam_policy.dappbot_api_allow_dynamodb.arn}"
 }
 
@@ -84,7 +84,7 @@ resource "aws_iam_policy" "dappbot_api_allow_cloudwatch" {
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_api_allow_cloudwatch" {
-  role       = "${aws_iam_role.dappbot_api_lambda_iam.id}"
+  role       = "${aws_iam_role.dappbot_private_api_iam.id}"
   policy_arn = "${aws_iam_policy.dappbot_api_allow_cloudwatch.arn}"
 }
 
@@ -115,7 +115,7 @@ resource "aws_iam_policy" "dappbot_api_allow_sqs" {
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_api_allow_sqs" {
-  role       = "${aws_iam_role.dappbot_api_lambda_iam.id}"
+  role       = "${aws_iam_role.dappbot_private_api_iam.id}"
   policy_arn = "${aws_iam_policy.dappbot_api_allow_sqs.arn}"
 }
 
@@ -144,7 +144,7 @@ resource "aws_iam_policy" "dappbot_api_allow_lambda_cognito" {
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_api_allow_lambda_cognito" {
-  role       = "${aws_iam_role.dappbot_api_lambda_iam.id}"
+  role       = "${aws_iam_role.dappbot_private_api_iam.id}"
   policy_arn = "${aws_iam_policy.dappbot_api_allow_lambda_cognito.arn}"
 }
 
@@ -160,5 +160,63 @@ data "aws_iam_policy_document" "dappbot_api_allow_cognito" {
       "cognito-idp:AdminGetUser"
     ]
     resources = ["${aws_cognito_user_pool.registered_users.arn}"]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# IAM FOR DAPPBOT PUBLIC API
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_role" "dappbot_public_api_iam" {
+  name = "dappbot-api-public-iam-${var.subdomain}"
+
+  assume_role_policy = "${data.aws_iam_policy_document.dappbot_api_lambda_assume_role.json}"
+
+  tags = "${local.default_tags}"
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_public_api_allow_cloudwatch" {
+  role       = "${aws_iam_role.dappbot_public_api_iam.id}"
+  policy_arn = "${aws_iam_policy.dappbot_api_allow_cloudwatch.arn}"
+}
+
+resource "aws_iam_policy" "dappbot_public_api_allow_dynamodb" {
+  name = "allow-dynamodb-dappbot-public-api-${var.subdomain}"
+
+  policy = "${data.aws_iam_policy_document.dappbot_public_api_allow_dynamodb.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_public_api_allow_dynamodb" {
+  role       = "${aws_iam_role.dappbot_public_api_iam.id}"
+  policy_arn = "${aws_iam_policy.dappbot_public_api_allow_dynamodb.arn}"
+}
+
+data "aws_iam_policy_document" "dappbot_public_api_allow_dynamodb" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DescribeTable"
+    ]
+    resources = ["${aws_dynamodb_table.dapp_table.arn}"]
+  }
+
+  statement {
+      sid = "2"
+
+      effect = "Allow"
+
+      actions = [
+          "dynamodb:BatchGetItem",
+          "dynamodb:GetItem",
+          "dynamodb:Query"
+      ]
+      resources = [
+        "${aws_dynamodb_table.dapp_table.arn}",
+        "${aws_dynamodb_table.dapp_table.arn}/*"
+      ]
   }
 }

@@ -76,17 +76,17 @@ resource "aws_s3_bucket" "dappseed_bucket" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 # Wait ensures that the role is fully created when Lambda tries to assume it.
-resource "null_resource" "dappbot_api_lambda_wait" {
+resource "null_resource" "dappbot_private_api_wait" {
   provisioner "local-exec" {
     command = "sleep 10"
   }
-  depends_on = ["aws_iam_role.dappbot_api_lambda_iam"]
+  depends_on = ["aws_iam_role.dappbot_private_api_iam"]
 }
 
 resource "aws_lambda_function" "dappbot_api_lambda" {
   filename         = "dappbot-api-lambda.zip"
   function_name    = "dappbot-api-lambda-${var.subdomain}"
-  role             = "${aws_iam_role.dappbot_api_lambda_iam.arn}"
+  role             = "${aws_iam_role.dappbot_private_api_iam.arn}"
   handler          = "index.privateHandler"
   source_code_hash = "${base64sha256(file("dappbot-api-lambda.zip"))}"
   runtime          = "nodejs8.10"
@@ -101,7 +101,7 @@ resource "aws_lambda_function" "dappbot_api_lambda" {
     }
   }
 
-  depends_on = ["null_resource.dappbot_api_lambda_wait"]
+  depends_on = ["null_resource.dappbot_private_api_wait"]
 
   tags = "${local.default_tags}"
 }
@@ -121,14 +121,17 @@ resource "aws_lambda_permission" "api_gateway_invoke_dappbot_api_lambda" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 # Wait ensures that the role is fully created when Lambda tries to assume it.
+resource "null_resource" "dappbot_public_api_wait" {
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+  depends_on = ["aws_iam_role.dappbot_public_api_iam"]
+}
+
 resource "aws_lambda_function" "dapphub_view_lambda" {
-  filename      = "dappbot-api-lambda.zip"
-  function_name = "dapphub-view-lambda-${var.subdomain}"
-
-  # TODO: Stop piggy-backing on the other Lambda's permissions, this
-  # public fxn should not have all that access.
-  role = "${aws_iam_role.dappbot_api_lambda_iam.arn}"
-
+  filename         = "dappbot-api-lambda.zip"
+  function_name    = "dapphub-view-lambda-${var.subdomain}"
+  role             = "${aws_iam_role.dappbot_public_api_iam.arn}"
   handler          = "index.publicHandler"
   source_code_hash = "${base64sha256(file("dappbot-api-lambda.zip"))}"
   runtime          = "nodejs8.10"
@@ -140,7 +143,7 @@ resource "aws_lambda_function" "dapphub_view_lambda" {
     }
   }
 
-  depends_on = ["null_resource.dappbot_api_lambda_wait"]
+  depends_on = ["null_resource.dappbot_public_api_wait"]
 
   tags = "${local.default_tags}"
 }
