@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------------------------------------------------------------
-# IAM FOR DAPPBOT
+# IAM FOR DAPPBOT MANAGER
 # ---------------------------------------------------------------------------------------------------------------------
-resource "aws_iam_role" "dappbot_lambda_iam" {
-  name = "dappbot-lambda-iam-${var.subdomain}"
+resource "aws_iam_role" "dappbot_manager_iam" {
+  name = "dappbot-manager-iam-${var.subdomain}"
 
   assume_role_policy = "${data.aws_iam_policy_document.dappbot_lambda_assume_role.json}"
 
@@ -35,7 +35,7 @@ resource "aws_iam_policy" "dappbot_allow_cloudwatch" {
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_cloudwatch" {
-  role       = "${aws_iam_role.dappbot_lambda_iam.id}"
+  role       = "${aws_iam_role.dappbot_manager_iam.id}"
   policy_arn = "${aws_iam_policy.dappbot_allow_cloudwatch.arn}"
 }
 
@@ -66,7 +66,7 @@ resource "aws_iam_policy" "dappbot_allow_dynamodb" {
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_dynamodb" {
-  role       = "${aws_iam_role.dappbot_lambda_iam.id}"
+  role       = "${aws_iam_role.dappbot_manager_iam.id}"
   policy_arn = "${aws_iam_policy.dappbot_allow_dynamodb.arn}"
 }
 
@@ -115,7 +115,7 @@ resource "aws_iam_policy" "dappbot_allow_s3" {
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_s3" {
-  role       = "${aws_iam_role.dappbot_lambda_iam.id}"
+  role       = "${aws_iam_role.dappbot_manager_iam.id}"
   policy_arn = "${aws_iam_policy.dappbot_allow_s3.arn}"
 }
 
@@ -178,7 +178,7 @@ resource "aws_iam_policy" "dappbot_allow_cloudfront" {
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_cloudfront" {
-  role       = "${aws_iam_role.dappbot_lambda_iam.id}"
+  role       = "${aws_iam_role.dappbot_manager_iam.id}"
   policy_arn = "${aws_iam_policy.dappbot_allow_cloudfront.arn}"
 }
 
@@ -214,7 +214,7 @@ resource "aws_iam_policy" "dappbot_allow_route53" {
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_route53" {
-  role       = "${aws_iam_role.dappbot_lambda_iam.id}"
+  role       = "${aws_iam_role.dappbot_manager_iam.id}"
   policy_arn = "${aws_iam_policy.dappbot_allow_route53.arn}"
 }
 
@@ -243,7 +243,7 @@ resource "aws_iam_policy" "dappbot_allow_codepipeline" {
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_codepipeline" {
-  role       = "${aws_iam_role.dappbot_lambda_iam.id}"
+  role       = "${aws_iam_role.dappbot_manager_iam.id}"
   policy_arn = "${aws_iam_policy.dappbot_allow_codepipeline.arn}"
 }
 
@@ -275,7 +275,7 @@ resource "aws_iam_policy" "dappbot_allow_lambda_iam" {
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_lambda_iam" {
-  role       = "${aws_iam_role.dappbot_lambda_iam.id}"
+  role       = "${aws_iam_role.dappbot_manager_iam.id}"
   policy_arn = "${aws_iam_policy.dappbot_allow_lambda_iam.arn}"
 }
 
@@ -304,7 +304,7 @@ resource "aws_iam_policy" "dappbot_allow_lambda_cognito" {
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_lambda_cognito" {
-  role       = "${aws_iam_role.dappbot_lambda_iam.id}"
+  role       = "${aws_iam_role.dappbot_manager_iam.id}"
   policy_arn = "${aws_iam_policy.dappbot_allow_lambda_cognito.arn}"
 }
 
@@ -333,7 +333,7 @@ resource "aws_iam_policy" "dappbot_allow_sqs" {
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_sqs" {
-  role       = "${aws_iam_role.dappbot_lambda_iam.id}"
+  role       = "${aws_iam_role.dappbot_manager_iam.id}"
   policy_arn = "${aws_iam_policy.dappbot_allow_sqs.arn}"
 }
 
@@ -356,4 +356,25 @@ data "aws_iam_policy_document" "dappbot_allow_sqs" {
       "${aws_sqs_queue.dappbot_deadletter.arn}"
     ]
   }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# IAM FOR DAPPBOT DEAD LETTER HANDLER
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_role" "dappbot_deadletter_iam" {
+  name = "dappbot-deadletter-iam-${var.subdomain}"
+
+  assume_role_policy = "${data.aws_iam_policy_document.dappbot_lambda_assume_role.json}"
+
+  tags = "${local.default_tags}"
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_deadletter_allow_sqs" {
+  role       = "${aws_iam_role.dappbot_deadletter_iam.id}"
+  policy_arn = "${aws_iam_policy.dappbot_allow_sqs.arn}"
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_deadletter_allow_dynamodb" {
+  role       = "${aws_iam_role.dappbot_deadletter_iam.id}"
+  policy_arn = "${aws_iam_policy.dappbot_allow_dynamodb.arn}"
 }

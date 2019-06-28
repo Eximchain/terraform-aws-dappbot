@@ -163,18 +163,18 @@ resource "aws_lambda_permission" "api_gateway_invoke_dapphub_view_lambda" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 # Wait ensures that the role is fully created when Lambda tries to assume it.
-resource "null_resource" "dappbot_lambda_wait" {
+resource "null_resource" "dappbot_manager_wait" {
   provisioner "local-exec" {
     command = "sleep 10"
   }
-  depends_on = ["aws_iam_role.dappbot_lambda_iam"]
+  depends_on = ["aws_iam_role.dappbot_manager_iam"]
 }
 
 resource "aws_lambda_function" "dappbot_manager_lambda" {
   filename         = "dappbot-manager-lambda.zip"
   function_name    = "dappbot-manager-${var.subdomain}"
   # TODO: Split Permissions
-  role             = "${aws_iam_role.dappbot_lambda_iam.arn}"
+  role             = "${aws_iam_role.dappbot_manager_iam.arn}"
   handler          = "index.handler"
   source_code_hash = "${base64sha256(file("dappbot-manager-lambda.zip"))}"
   runtime          = "nodejs8.10"
@@ -199,7 +199,7 @@ resource "aws_lambda_function" "dappbot_manager_lambda" {
     }
   }
 
-  depends_on = ["null_resource.dappbot_lambda_wait"]
+  depends_on = ["null_resource.dappbot_manager_wait"]
 
   tags = "${local.default_tags}"
 }
@@ -223,11 +223,18 @@ resource "aws_lambda_event_source_mapping" "dappbot_sqs_event" {
 # ---------------------------------------------------------------------------------------------------------------------
 # DAPPBOT MANAGER DEAD LETTER FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
+# Wait ensures that the role is fully created when Lambda tries to assume it.
+resource "null_resource" "dappbot_deadletter_wait" {
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+  depends_on = ["aws_iam_role.dappbot_deadletter_iam"]
+}
+
 resource "aws_lambda_function" "dappbot_manager_deadletter_lambda" {
   filename         = "dappbot-manager-lambda.zip"
   function_name    = "dappbot-manager-deadletter-${var.subdomain}"
-  # TODO: Split Permissions
-  role             = "${aws_iam_role.dappbot_lambda_iam.arn}"
+  role             = "${aws_iam_role.dappbot_deadletter_iam.arn}"
   handler          = "index.deadLetterHandler"
   source_code_hash = "${base64sha256(file("dappbot-manager-lambda.zip"))}"
   runtime          = "nodejs8.10"
@@ -252,7 +259,7 @@ resource "aws_lambda_function" "dappbot_manager_deadletter_lambda" {
     }
   }
 
-  depends_on = ["null_resource.dappbot_lambda_wait"]
+  depends_on = ["null_resource.dappbot_manager_wait"]
 
   tags = "${local.default_tags}"
 }
@@ -280,7 +287,7 @@ resource "aws_lambda_function" "dappbot_event_listener_lambda" {
   filename         = "dappbot-event-listener-lambda.zip"
   function_name    = "dappbot-event-listener-lambda-${var.subdomain}"
   # TODO: Stop piggy-backing on the other Lambda's permissions
-  role             = "${aws_iam_role.dappbot_lambda_iam.arn}"
+  role             = "${aws_iam_role.dappbot_manager_iam.arn}"
   handler          = "index.handler"
   source_code_hash = "${base64sha256(file("dappbot-event-listener-lambda.zip"))}"
   runtime          = "nodejs8.10"
@@ -303,7 +310,7 @@ resource "aws_lambda_function" "dappbot_event_listener_lambda" {
     }
   }
 
-  depends_on = ["null_resource.dappbot_lambda_wait"]
+  depends_on = ["null_resource.dappbot_manager_wait"]
 
   tags = "${local.default_tags}"
 }
