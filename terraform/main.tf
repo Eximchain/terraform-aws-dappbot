@@ -281,13 +281,20 @@ resource "aws_lambda_event_source_mapping" "dappbot_deadletter_sqs_event" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# DAPPBOT SERVICES LAMBDA FUNCTION
+# DAPPBOT EVENT LISTENER LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
+# Wait ensures that the role is fully created when Lambda tries to assume it.
+resource "null_resource" "dappbot_event_listener_wait" {
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+  depends_on = ["aws_iam_role.dappbot_event_listener_iam"]
+}
+
 resource "aws_lambda_function" "dappbot_event_listener_lambda" {
   filename         = "dappbot-event-listener-lambda.zip"
   function_name    = "dappbot-event-listener-lambda-${var.subdomain}"
-  # TODO: Stop piggy-backing on the other Lambda's permissions
-  role             = "${aws_iam_role.dappbot_manager_iam.arn}"
+  role             = "${aws_iam_role.dappbot_event_listener_iam.arn}"
   handler          = "index.handler"
   source_code_hash = "${base64sha256(file("dappbot-event-listener-lambda.zip"))}"
   runtime          = "nodejs8.10"
@@ -310,7 +317,7 @@ resource "aws_lambda_function" "dappbot_event_listener_lambda" {
     }
   }
 
-  depends_on = ["null_resource.dappbot_manager_wait"]
+  depends_on = ["null_resource.dappbot_event_listener_wait"]
 
   tags = "${local.default_tags}"
 }

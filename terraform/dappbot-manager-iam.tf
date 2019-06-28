@@ -195,7 +195,6 @@ data "aws_iam_policy_document" "dappbot_allow_cloudfront" {
       "cloudfront:TagResource",
       "cloudfront:GetDistributionConfig",
       "cloudfront:UpdateDistribution",
-      "cloudfront:DeleteDistribution",
       "cloudfront:ListDistributions",
       "cloudfront:ListTagsForResource",
       "cloudfront:CreateInvalidation"
@@ -377,4 +376,114 @@ resource "aws_iam_role_policy_attachment" "dappbot_deadletter_allow_sqs" {
 resource "aws_iam_role_policy_attachment" "dappbot_deadletter_allow_dynamodb" {
   role       = "${aws_iam_role.dappbot_deadletter_iam.id}"
   policy_arn = "${aws_iam_policy.dappbot_allow_dynamodb.arn}"
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_deadletter_allow_cloudwatch" {
+  role       = "${aws_iam_role.dappbot_deadletter_iam.id}"
+  policy_arn = "${aws_iam_policy.dappbot_allow_cloudwatch.arn}"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# IAM FOR DAPPBOT EVENT LISTENER
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_role" "dappbot_event_listener_iam" {
+  name = "dappbot-event-listener-iam-${var.subdomain}"
+
+  assume_role_policy = "${data.aws_iam_policy_document.dappbot_lambda_assume_role.json}"
+
+  tags = "${local.default_tags}"
+}
+
+# Cloudwatch (Logs)
+resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_cloudwatch" {
+  role       = "${aws_iam_role.dappbot_event_listener_iam.id}"
+  policy_arn = "${aws_iam_policy.dappbot_allow_cloudwatch.arn}"
+}
+
+# Codepipeline
+resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_codepipeline" {
+  role       = "${aws_iam_role.dappbot_event_listener_iam.id}"
+  policy_arn = "${aws_iam_policy.dappbot_allow_codepipeline.arn}"
+}
+
+# DynamoDB
+resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_dynamodb" {
+  role       = "${aws_iam_role.dappbot_event_listener_iam.id}"
+  policy_arn = "${aws_iam_policy.dappbot_allow_dynamodb.arn}"
+}
+
+# Cloudfront
+resource "aws_iam_policy" "dappbot_event_listener_allow_cloudfront" {
+  name = "allow-cloudfront-dappbot-listener-${var.subdomain}"
+
+  policy = "${data.aws_iam_policy_document.dappbot_event_listener_allow_cloudfront.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_cloudfront" {
+  role       = "${aws_iam_role.dappbot_event_listener_iam.id}"
+  policy_arn = "${aws_iam_policy.dappbot_event_listener_allow_cloudfront.arn}"
+}
+
+data "aws_iam_policy_document" "dappbot_event_listener_allow_cloudfront" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "cloudfront:GetDistributionConfig",
+      "cloudfront:UpdateDistribution",
+      "cloudfront:DeleteDistribution",
+      "cloudfront:ListDistributions",
+      "cloudfront:ListTagsForResource"
+    ]
+    resources = ["*"]
+  }
+}
+
+# S3
+resource "aws_iam_policy" "dappbot_event_listener_allow_s3" {
+  name = "allow-s3-dappbot-listener-${var.subdomain}"
+
+  policy = "${data.aws_iam_policy_document.dappbot_event_listener_allow_s3.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_s3" {
+  role       = "${aws_iam_role.dappbot_event_listener_iam.id}"
+  policy_arn = "${aws_iam_policy.dappbot_event_listener_allow_s3.arn}"
+}
+
+data "aws_iam_policy_document" "dappbot_event_listener_allow_s3" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "s3:GetObjectAcl",
+      "s3:PutObjectAcl"
+    ]
+    resources = [
+      "${local.s3_bucket_arn_pattern}"
+    ]
+  }
+
+  statement {
+      sid = "2"
+
+      effect = "Allow"
+
+      actions = [
+          "s3:PutObject",
+          "s3:GetObject"
+      ]
+      resources = [
+        "${local.s3_bucket_arn_pattern}/*",
+        "${aws_s3_bucket.artifact_bucket.arn}"
+      ]
+  }
 }
