@@ -95,6 +95,7 @@ resource "aws_lambda_function" "dappbot_api_lambda" {
   environment {
     variables {
       COGNITO_USER_POOL  = "${aws_cognito_user_pool.registered_users.id}"
+      COGNITO_CLIENT_ID  = "${aws_cognito_user_pool_client.api_client.id}"
       DDB_TABLE          = "${aws_dynamodb_table.dapp_table.id}"
       DNS_ROOT           = "${local.created_dns_root}"
       SQS_QUEUE          = "${aws_sqs_queue.dappbot.id}"
