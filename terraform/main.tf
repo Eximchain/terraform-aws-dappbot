@@ -897,7 +897,7 @@ resource "aws_sqs_queue" "dappbot_deadletter" {
 # DAPPHUB WEBSITE
 # ---------------------------------------------------------------------------------------------------------------------
 module "dapphub_website" {
-  source = "git@github.com:eximchain/terraform-aws-static-website.git"
+  source = "git@github.com:Eximchain/terraform-aws-static-website.git"
 
   dns_name    = local.dapphub_dns
   domain_root = var.root_domain
