@@ -13,7 +13,11 @@ If you need to build the image yourself, first make sure that you set the follow
 
 Check under the "NPM service account" in your 1password shared keys for all npm values.
 
+Also ensure that you have run "$export GITHUB_TOKEN=XXX" or you will run into github oauth issues when running the terraform apply.
+
 Before running `packer build dappsmith-builder.json`, double-check that the `aws_account_id`, `aws_region`, `repository`, and `image_tag` variables are all set to appropriate values.
+
+
 
 ## Dev Testing
 
