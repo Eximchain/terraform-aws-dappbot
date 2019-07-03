@@ -4,9 +4,9 @@
 resource "aws_iam_role" "dappbot_manager_iam" {
   name = "dappbot-manager-iam-${var.subdomain}"
 
-  assume_role_policy = "${data.aws_iam_policy_document.dappbot_lambda_assume_role.json}"
+  assume_role_policy = data.aws_iam_policy_document.dappbot_lambda_assume_role.json
 
-  tags = "${local.default_tags}"
+  tags = local.default_tags
 }
 
 data "aws_iam_policy_document" "dappbot_lambda_assume_role" {
@@ -31,12 +31,12 @@ data "aws_iam_policy_document" "dappbot_lambda_assume_role" {
 resource "aws_iam_policy" "dappbot_allow_cloudwatch" {
   name = "allow-cloudwatch-dappbot-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_allow_cloudwatch.json}"
+  policy = data.aws_iam_policy_document.dappbot_allow_cloudwatch.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_cloudwatch" {
-  role       = "${aws_iam_role.dappbot_manager_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_cloudwatch.arn}"
+  role       = aws_iam_role.dappbot_manager_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_cloudwatch.arn
 }
 
 data "aws_iam_policy_document" "dappbot_allow_cloudwatch" {
@@ -50,7 +50,7 @@ data "aws_iam_policy_document" "dappbot_allow_cloudwatch" {
     actions = [
       "logs:CreateLogGroup",
       "logs:CreateLogStream",
-      "logs:PutLogEvents"
+      "logs:PutLogEvents",
     ]
     resources = ["arn:aws:logs:*:*:*"]
   }
@@ -62,12 +62,12 @@ data "aws_iam_policy_document" "dappbot_allow_cloudwatch" {
 resource "aws_iam_policy" "dappbot_allow_dynamodb" {
   name = "allow-dynamodb-dappbot-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_allow_dynamodb.json}"
+  policy = data.aws_iam_policy_document.dappbot_allow_dynamodb.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_dynamodb" {
-  role       = "${aws_iam_role.dappbot_manager_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_dynamodb.arn}"
+  role       = aws_iam_role.dappbot_manager_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_dynamodb.arn
 }
 
 data "aws_iam_policy_document" "dappbot_allow_dynamodb" {
@@ -79,29 +79,29 @@ data "aws_iam_policy_document" "dappbot_allow_dynamodb" {
     effect = "Allow"
 
     actions = [
-      "dynamodb:DescribeTable"
+      "dynamodb:DescribeTable",
     ]
-    resources = ["${aws_dynamodb_table.dapp_table.arn}"]
+    resources = [aws_dynamodb_table.dapp_table.arn]
   }
 
   statement {
-      sid = "2"
+    sid = "2"
 
-      effect = "Allow"
+    effect = "Allow"
 
-      actions = [
-          "dynamodb:BatchGetItem",
-          "dynamodb:BatchWriteItem",
-          "dynamodb:DeleteItem",
-          "dynamodb:GetItem",
-          "dynamodb:PutItem",
-          "dynamodb:UpdateItem",
-          "dynamodb:Query"
-      ]
-      resources = [
-        "${aws_dynamodb_table.dapp_table.arn}",
-        "${aws_dynamodb_table.dapp_table.arn}/*"
-      ]
+    actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:BatchWriteItem",
+      "dynamodb:DeleteItem",
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:Query",
+    ]
+    resources = [
+      aws_dynamodb_table.dapp_table.arn,
+      "${aws_dynamodb_table.dapp_table.arn}/*",
+    ]
   }
 }
 
@@ -111,12 +111,12 @@ data "aws_iam_policy_document" "dappbot_allow_dynamodb" {
 resource "aws_iam_policy" "dappbot_allow_s3" {
   name = "allow-s3-dappbot-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_allow_s3.json}"
+  policy = data.aws_iam_policy_document.dappbot_allow_s3.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_s3" {
-  role       = "${aws_iam_role.dappbot_manager_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_s3.arn}"
+  role       = aws_iam_role.dappbot_manager_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_s3.arn
 }
 
 data "aws_iam_policy_document" "dappbot_allow_s3" {
@@ -141,30 +141,30 @@ data "aws_iam_policy_document" "dappbot_allow_s3" {
       "s3:GetBucketAcl",
       "s3:PutBucketAcl",
       "s3:GetObjectAcl",
-      "s3:PutObjectAcl"
+      "s3:PutObjectAcl",
     ]
     resources = [
-      "${local.s3_bucket_arn_pattern}",
-      "${aws_s3_bucket.dappseed_bucket.arn}"
+      local.s3_bucket_arn_pattern,
+      aws_s3_bucket.dappseed_bucket.arn,
     ]
   }
 
   statement {
-      sid = "2"
+    sid = "2"
 
-      effect = "Allow"
+    effect = "Allow"
 
-      actions = [
-          "s3:PutObject",
-          "s3:GetObject",
-          "s3:DeleteObject",
-          "s3:ListObjects"
-      ]
-      resources = [
-        "${local.s3_bucket_arn_pattern}/*",
-        "${aws_s3_bucket.dappseed_bucket.arn}/*",
-        "${aws_s3_bucket.artifact_bucket.arn}"
-      ]
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+      "s3:DeleteObject",
+      "s3:ListObjects",
+    ]
+    resources = [
+      "${local.s3_bucket_arn_pattern}/*",
+      "${aws_s3_bucket.dappseed_bucket.arn}/*",
+      aws_s3_bucket.artifact_bucket.arn,
+    ]
   }
 }
 
@@ -174,12 +174,12 @@ data "aws_iam_policy_document" "dappbot_allow_s3" {
 resource "aws_iam_policy" "dappbot_allow_cloudfront" {
   name = "allow-cloudfront-dappbot-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_allow_cloudfront.json}"
+  policy = data.aws_iam_policy_document.dappbot_allow_cloudfront.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_cloudfront" {
-  role       = "${aws_iam_role.dappbot_manager_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_cloudfront.arn}"
+  role       = aws_iam_role.dappbot_manager_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_cloudfront.arn
 }
 
 data "aws_iam_policy_document" "dappbot_allow_cloudfront" {
@@ -197,7 +197,7 @@ data "aws_iam_policy_document" "dappbot_allow_cloudfront" {
       "cloudfront:UpdateDistribution",
       "cloudfront:ListDistributions",
       "cloudfront:ListTagsForResource",
-      "cloudfront:CreateInvalidation"
+      "cloudfront:CreateInvalidation",
     ]
     resources = ["*"]
   }
@@ -209,12 +209,12 @@ data "aws_iam_policy_document" "dappbot_allow_cloudfront" {
 resource "aws_iam_policy" "dappbot_allow_route53" {
   name = "allow-route53-dappbot-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_allow_route53.json}"
+  policy = data.aws_iam_policy_document.dappbot_allow_route53.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_route53" {
-  role       = "${aws_iam_role.dappbot_manager_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_route53.arn}"
+  role       = aws_iam_role.dappbot_manager_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_route53.arn
 }
 
 data "aws_iam_policy_document" "dappbot_allow_route53" {
@@ -226,7 +226,7 @@ data "aws_iam_policy_document" "dappbot_allow_route53" {
     effect = "Allow"
 
     actions = [
-      "route53:ChangeResourceRecordSets"
+      "route53:ChangeResourceRecordSets",
     ]
     resources = ["*"]
   }
@@ -238,12 +238,12 @@ data "aws_iam_policy_document" "dappbot_allow_route53" {
 resource "aws_iam_policy" "dappbot_allow_codepipeline" {
   name = "allow-codepipeline-dappbot-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_allow_codepipeline.json}"
+  policy = data.aws_iam_policy_document.dappbot_allow_codepipeline.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_codepipeline" {
-  role       = "${aws_iam_role.dappbot_manager_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_codepipeline.arn}"
+  role       = aws_iam_role.dappbot_manager_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_codepipeline.arn
 }
 
 data "aws_iam_policy_document" "dappbot_allow_codepipeline" {
@@ -258,7 +258,7 @@ data "aws_iam_policy_document" "dappbot_allow_codepipeline" {
       "codepipeline:CreatePipeline",
       "codepipeline:DeletePipeline",
       "codepipeline:PutJobSuccessResult",
-      "codepipeline:PutJobFailureResult"
+      "codepipeline:PutJobFailureResult",
     ]
     resources = ["*"]
   }
@@ -270,12 +270,12 @@ data "aws_iam_policy_document" "dappbot_allow_codepipeline" {
 resource "aws_iam_policy" "dappbot_allow_lambda_iam" {
   name = "allow-iam-dappbot-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_allow_iam.json}"
+  policy = data.aws_iam_policy_document.dappbot_allow_iam.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_lambda_iam" {
-  role       = "${aws_iam_role.dappbot_manager_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_lambda_iam.arn}"
+  role       = aws_iam_role.dappbot_manager_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_lambda_iam.arn
 }
 
 data "aws_iam_policy_document" "dappbot_allow_iam" {
@@ -287,9 +287,9 @@ data "aws_iam_policy_document" "dappbot_allow_iam" {
     effect = "Allow"
 
     actions = [
-      "iam:PassRole"
+      "iam:PassRole",
     ]
-    resources = ["${aws_iam_role.dappbot_codepipeline_iam.arn}"]
+    resources = [aws_iam_role.dappbot_codepipeline_iam.arn]
   }
 }
 
@@ -299,12 +299,12 @@ data "aws_iam_policy_document" "dappbot_allow_iam" {
 resource "aws_iam_policy" "dappbot_allow_lambda_cognito" {
   name = "allow-cognito-dappbot-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_allow_cognito.json}"
+  policy = data.aws_iam_policy_document.dappbot_allow_cognito.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_lambda_cognito" {
-  role       = "${aws_iam_role.dappbot_manager_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_lambda_cognito.arn}"
+  role       = aws_iam_role.dappbot_manager_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_lambda_cognito.arn
 }
 
 data "aws_iam_policy_document" "dappbot_allow_cognito" {
@@ -316,9 +316,9 @@ data "aws_iam_policy_document" "dappbot_allow_cognito" {
     effect = "Allow"
 
     actions = [
-      "cognito-idp:AdminGetUser"
+      "cognito-idp:AdminGetUser",
     ]
-    resources = ["${aws_cognito_user_pool.registered_users.arn}"]
+    resources = [aws_cognito_user_pool.registered_users.arn]
   }
 }
 
@@ -328,12 +328,12 @@ data "aws_iam_policy_document" "dappbot_allow_cognito" {
 resource "aws_iam_policy" "dappbot_allow_sqs" {
   name = "allow-sqs-dappbot-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_allow_sqs.json}"
+  policy = data.aws_iam_policy_document.dappbot_allow_sqs.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_allow_sqs" {
-  role       = "${aws_iam_role.dappbot_manager_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_sqs.arn}"
+  role       = aws_iam_role.dappbot_manager_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_sqs.arn
 }
 
 data "aws_iam_policy_document" "dappbot_allow_sqs" {
@@ -348,11 +348,11 @@ data "aws_iam_policy_document" "dappbot_allow_sqs" {
       "sqs:ReceiveMessage",
       "sqs:DeleteMessage",
       "sqs:GetQueueAttributes",
-      "sqs:ChangeMessageVisibility"
+      "sqs:ChangeMessageVisibility",
     ]
     resources = [
-      "${aws_sqs_queue.dappbot.arn}",
-      "${aws_sqs_queue.dappbot_deadletter.arn}"
+      aws_sqs_queue.dappbot.arn,
+      aws_sqs_queue.dappbot_deadletter.arn,
     ]
   }
 }
@@ -363,24 +363,24 @@ data "aws_iam_policy_document" "dappbot_allow_sqs" {
 resource "aws_iam_role" "dappbot_deadletter_iam" {
   name = "dappbot-deadletter-iam-${var.subdomain}"
 
-  assume_role_policy = "${data.aws_iam_policy_document.dappbot_lambda_assume_role.json}"
+  assume_role_policy = data.aws_iam_policy_document.dappbot_lambda_assume_role.json
 
-  tags = "${local.default_tags}"
+  tags = local.default_tags
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_deadletter_allow_sqs" {
-  role       = "${aws_iam_role.dappbot_deadletter_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_sqs.arn}"
+  role       = aws_iam_role.dappbot_deadletter_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_sqs.arn
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_deadletter_allow_dynamodb" {
-  role       = "${aws_iam_role.dappbot_deadletter_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_dynamodb.arn}"
+  role       = aws_iam_role.dappbot_deadletter_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_dynamodb.arn
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_deadletter_allow_cloudwatch" {
-  role       = "${aws_iam_role.dappbot_deadletter_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_cloudwatch.arn}"
+  role       = aws_iam_role.dappbot_deadletter_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_cloudwatch.arn
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -389,39 +389,39 @@ resource "aws_iam_role_policy_attachment" "dappbot_deadletter_allow_cloudwatch" 
 resource "aws_iam_role" "dappbot_event_listener_iam" {
   name = "dappbot-event-listener-iam-${var.subdomain}"
 
-  assume_role_policy = "${data.aws_iam_policy_document.dappbot_lambda_assume_role.json}"
+  assume_role_policy = data.aws_iam_policy_document.dappbot_lambda_assume_role.json
 
-  tags = "${local.default_tags}"
+  tags = local.default_tags
 }
 
 # Cloudwatch (Logs)
 resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_cloudwatch" {
-  role       = "${aws_iam_role.dappbot_event_listener_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_cloudwatch.arn}"
+  role       = aws_iam_role.dappbot_event_listener_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_cloudwatch.arn
 }
 
 # Codepipeline
 resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_codepipeline" {
-  role       = "${aws_iam_role.dappbot_event_listener_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_codepipeline.arn}"
+  role       = aws_iam_role.dappbot_event_listener_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_codepipeline.arn
 }
 
 # DynamoDB
 resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_dynamodb" {
-  role       = "${aws_iam_role.dappbot_event_listener_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_allow_dynamodb.arn}"
+  role       = aws_iam_role.dappbot_event_listener_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_dynamodb.arn
 }
 
 # Cloudfront
 resource "aws_iam_policy" "dappbot_event_listener_allow_cloudfront" {
   name = "allow-cloudfront-dappbot-listener-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_event_listener_allow_cloudfront.json}"
+  policy = data.aws_iam_policy_document.dappbot_event_listener_allow_cloudfront.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_cloudfront" {
-  role       = "${aws_iam_role.dappbot_event_listener_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_event_listener_allow_cloudfront.arn}"
+  role       = aws_iam_role.dappbot_event_listener_iam.id
+  policy_arn = aws_iam_policy.dappbot_event_listener_allow_cloudfront.arn
 }
 
 data "aws_iam_policy_document" "dappbot_event_listener_allow_cloudfront" {
@@ -437,7 +437,7 @@ data "aws_iam_policy_document" "dappbot_event_listener_allow_cloudfront" {
       "cloudfront:UpdateDistribution",
       "cloudfront:DeleteDistribution",
       "cloudfront:ListDistributions",
-      "cloudfront:ListTagsForResource"
+      "cloudfront:ListTagsForResource",
     ]
     resources = ["*"]
   }
@@ -447,12 +447,12 @@ data "aws_iam_policy_document" "dappbot_event_listener_allow_cloudfront" {
 resource "aws_iam_policy" "dappbot_event_listener_allow_s3" {
   name = "allow-s3-dappbot-listener-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_event_listener_allow_s3.json}"
+  policy = data.aws_iam_policy_document.dappbot_event_listener_allow_s3.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_s3" {
-  role       = "${aws_iam_role.dappbot_event_listener_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_event_listener_allow_s3.arn}"
+  role       = aws_iam_role.dappbot_event_listener_iam.id
+  policy_arn = aws_iam_policy.dappbot_event_listener_allow_s3.arn
 }
 
 data "aws_iam_policy_document" "dappbot_event_listener_allow_s3" {
@@ -465,25 +465,27 @@ data "aws_iam_policy_document" "dappbot_event_listener_allow_s3" {
 
     actions = [
       "s3:GetObjectAcl",
-      "s3:PutObjectAcl"
+      "s3:PutObjectAcl",
     ]
+    
     resources = [
-      "${local.s3_bucket_arn_pattern}"
+      local.s3_bucket_arn_pattern,
     ]
   }
 
   statement {
-      sid = "2"
+    sid = "2"
 
-      effect = "Allow"
+    effect = "Allow"
 
-      actions = [
-          "s3:PutObject",
-          "s3:GetObject"
-      ]
-      resources = [
-        "${local.s3_bucket_arn_pattern}/*",
-        "${aws_s3_bucket.artifact_bucket.arn}"
-      ]
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject",
+    ]
+
+    resources = [
+      "${local.s3_bucket_arn_pattern}/*",
+      aws_s3_bucket.artifact_bucket.arn,
+    ]
   }
 }
