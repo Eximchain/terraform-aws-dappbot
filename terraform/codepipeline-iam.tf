@@ -26,7 +26,8 @@ resource "aws_iam_role" "dappbot_codepipeline_iam" {
 }
 EOF
 
-  tags = "${local.default_tags}"
+
+  tags = local.default_tags
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -35,12 +36,12 @@ EOF
 resource "aws_iam_policy" "codepipeline" {
   name = "allow-s3-dappbot-codepipeline-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.codepipeline.json}"
+  policy = data.aws_iam_policy_document.codepipeline.json
 }
 
 resource "aws_iam_role_policy_attachment" "codepipeline" {
-  role       = "${aws_iam_role.dappbot_codepipeline_iam.id}"
-  policy_arn = "${aws_iam_policy.codepipeline.arn}"
+  role = aws_iam_role.dappbot_codepipeline_iam.id
+  policy_arn = aws_iam_policy.codepipeline.arn
 }
 
 data "aws_iam_policy_document" "codepipeline" {
@@ -52,16 +53,16 @@ data "aws_iam_policy_document" "codepipeline" {
     effect = "Allow"
 
     actions = [
-      "s3:*"
+      "s3:*",
     ]
 
     resources = [
-      "${local.s3_bucket_arn_pattern}",
+      local.s3_bucket_arn_pattern,
       "${local.s3_bucket_arn_pattern}/*",
-      "${aws_s3_bucket.dappseed_bucket.arn}",
+      aws_s3_bucket.dappseed_bucket.arn,
       "${aws_s3_bucket.dappseed_bucket.arn}/*",
-      "${aws_s3_bucket.artifact_bucket.arn}",
-      "${aws_s3_bucket.artifact_bucket.arn}/*"
+      aws_s3_bucket.artifact_bucket.arn,
+      "${aws_s3_bucket.artifact_bucket.arn}/*",
     ]
   }
 
@@ -72,7 +73,7 @@ data "aws_iam_policy_document" "codepipeline" {
 
     actions = [
       "codebuild:BatchGetBuilds",
-      "codebuild:StartBuild"
+      "codebuild:StartBuild",
     ]
 
     resources = ["*"]
@@ -84,7 +85,7 @@ data "aws_iam_policy_document" "codepipeline" {
     effect = "Allow"
 
     actions = [
-      "lambda:InvokeFunction"
+      "lambda:InvokeFunction",
     ]
 
     // A known issue with the Lambda IAM permissions system makes it impossible
@@ -105,19 +106,19 @@ data "aws_iam_policy_document" "codepipeline" {
     actions = [
       "logs:CreateLogGroup",
       "logs:CreateLogStream",
-      "logs:PutLogEvents"
+      "logs:PutLogEvents",
     ]
-    
+
     resources = [
-      "*"
+      "*",
     ]
   }
-  
+
   statement {
     sid = "ReadOnlyECR"
-    
+
     effect = "Allow"
-    
+
     actions = [
       "ecr:GetAuthorizationToken",
       "ecr:BatchCheckLayerAvailability",
@@ -126,10 +127,9 @@ data "aws_iam_policy_document" "codepipeline" {
       "ecr:DescribeRepositories",
       "ecr:ListImages",
       "ecr:DescribeImages",
-      "ecr:BatchGetImage"
+      "ecr:BatchGetImage",
     ]
-    
+
     resources = ["*"]
   }
-
 }
