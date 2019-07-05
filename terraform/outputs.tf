@@ -2,8 +2,12 @@ output "api_dns" {
   value = aws_api_gateway_domain_name.domain.domain_name
 }
 
-output "hub_dns" {
+output "dapphub_dns" {
   value = local.dapphub_dns
+}
+
+output "dappbot_manager_dns" {
+  value = local.dappbot_manager_dns
 }
 
 output "cloudfront_cert_arn" {

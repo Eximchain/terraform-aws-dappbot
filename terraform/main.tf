@@ -29,7 +29,7 @@ locals {
   wildcard_cert_arn  = var.create_wildcard_cert ? aws_acm_certificate.cloudfront_cert[0].arn : data.aws_acm_certificate.cloudfront_cert[0].arn
   provision_api_cert = var.existing_cert_domain == ""
 
-  alternate_api_cert_aliases = [local.dapphub_dns]
+  alternate_api_cert_aliases = [local.dapphub_dns, local.dappbot_manager_dns]
   all_api_cert_aliases       = concat([local.api_domain], local.alternate_api_cert_aliases)
   api_cert_arn = element(
     coalescelist(
@@ -40,7 +40,8 @@ locals {
     0,
   )
 
-  dapphub_dns = "${var.dapphub_subdomain}.${var.root_domain}"
+  dapphub_dns         = "${var.dapphub_subdomain}.${var.root_domain}"
+  dappbot_manager_dns = "${var.dappbot_manager_subdomain}.${var.root_domain}"
 
   image_url              = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
   api_gateway_source_arn = "${aws_api_gateway_rest_api.dapp_api.execution_arn}/*/*/*"
@@ -909,6 +910,28 @@ module "dapphub_website" {
 
   github_website_repo   = "dapphub-spa"
   github_website_branch = var.dapphub_branch
+  deployment_directory  = "build"
+  build_command         = "npm install && npm run build"
+
+  force_destroy_buckets = true
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# DAPPBOT MANAGER WEBSITE
+# ---------------------------------------------------------------------------------------------------------------------
+module "dappbot_manager" {
+  source = "git@github.com:Eximchain/terraform-aws-static-website.git"
+
+  dns_name    = local.dappbot_manager_dns
+  domain_root = var.root_domain
+
+  website_bucket_name = "dappbot-manager-${var.subdomain}"
+  log_bucket_name     = "dappbot-manager-logs-${var.subdomain}"
+
+  acm_cert_arn = local.api_cert_arn
+
+  github_website_repo   = "dappbot-management-spa"
+  github_website_branch = var.dappbot_manager_branch
   deployment_directory  = "build"
   build_command         = "npm install && npm run build"
 

@@ -47,6 +47,16 @@ variable "dapphub_branch" {
   default     = "master"
 }
 
+variable "dappbot_manager_subdomain" {
+  description = "subdomain on which to host the DappBot Manager. The DappBot Manager DNS will be {dappbot_manager_subdomain}.{root_domain}"
+  default     = "hub-test"
+}
+
+variable "dappbot_manager_branch" {
+  description = "branch of the 'dappbot-management-spa' repository to deploy to DappBot Manager"
+  default     = "master"
+}
+
 variable "create_wildcard_cert" {
   description = "Create a new wildcard subdomain certificate.  Requires 30 minutes or more for validation.  If false, expects a validated cert to already exist for '*.subdomain.root_domain'."
   default     = false
