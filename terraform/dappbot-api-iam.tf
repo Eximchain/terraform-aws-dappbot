@@ -4,9 +4,9 @@
 resource "aws_iam_role" "dappbot_private_api_iam" {
   name = "dappbot-api-private-iam-${var.subdomain}"
 
-  assume_role_policy = "${data.aws_iam_policy_document.dappbot_api_lambda_assume_role.json}"
+  assume_role_policy = data.aws_iam_policy_document.dappbot_api_lambda_assume_role.json
 
-  tags = "${local.default_tags}"
+  tags = local.default_tags
 }
 
 data "aws_iam_policy_document" "dappbot_api_lambda_assume_role" {
@@ -31,12 +31,12 @@ data "aws_iam_policy_document" "dappbot_api_lambda_assume_role" {
 resource "aws_iam_policy" "dappbot_api_allow_dynamodb" {
   name = "allow-dynamodb-dappbot-api-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_api_allow_dynamodb.json}"
+  policy = data.aws_iam_policy_document.dappbot_api_allow_dynamodb.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_api_allow_dynamodb" {
-  role       = "${aws_iam_role.dappbot_private_api_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_api_allow_dynamodb.arn}"
+  role       = aws_iam_role.dappbot_private_api_iam.id
+  policy_arn = aws_iam_policy.dappbot_api_allow_dynamodb.arn
 }
 
 data "aws_iam_policy_document" "dappbot_api_allow_dynamodb" {
@@ -48,29 +48,31 @@ data "aws_iam_policy_document" "dappbot_api_allow_dynamodb" {
     effect = "Allow"
 
     actions = [
-      "dynamodb:DescribeTable"
+      "dynamodb:DescribeTable",
     ]
-    resources = ["${aws_dynamodb_table.dapp_table.arn}"]
+
+    resources = [aws_dynamodb_table.dapp_table.arn]
   }
 
   statement {
-      sid = "2"
+    sid = "2"
 
-      effect = "Allow"
+    effect = "Allow"
 
-      actions = [
-          "dynamodb:BatchGetItem",
-          "dynamodb:BatchWriteItem",
-          "dynamodb:DeleteItem",
-          "dynamodb:GetItem",
-          "dynamodb:PutItem",
-          "dynamodb:UpdateItem",
-          "dynamodb:Query"
-      ]
-      resources = [
-        "${aws_dynamodb_table.dapp_table.arn}",
-        "${aws_dynamodb_table.dapp_table.arn}/*"
-      ]
+    actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:BatchWriteItem",
+      "dynamodb:DeleteItem",
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:Query",
+    ]
+
+    resources = [
+      aws_dynamodb_table.dapp_table.arn,
+      "${aws_dynamodb_table.dapp_table.arn}/*",
+    ]
   }
 }
 
@@ -80,12 +82,12 @@ data "aws_iam_policy_document" "dappbot_api_allow_dynamodb" {
 resource "aws_iam_policy" "dappbot_api_allow_cloudwatch" {
   name = "allow-cloudwatch-dappbot-api-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_api_allow_cloudwatch.json}"
+  policy = data.aws_iam_policy_document.dappbot_api_allow_cloudwatch.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_api_allow_cloudwatch" {
-  role       = "${aws_iam_role.dappbot_private_api_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_api_allow_cloudwatch.arn}"
+  role       = aws_iam_role.dappbot_private_api_iam.id
+  policy_arn = aws_iam_policy.dappbot_api_allow_cloudwatch.arn
 }
 
 data "aws_iam_policy_document" "dappbot_api_allow_cloudwatch" {
@@ -99,8 +101,9 @@ data "aws_iam_policy_document" "dappbot_api_allow_cloudwatch" {
     actions = [
       "logs:CreateLogGroup",
       "logs:CreateLogStream",
-      "logs:PutLogEvents"
+      "logs:PutLogEvents",
     ]
+
     resources = ["arn:aws:logs:*:*:*"]
   }
 }
@@ -111,12 +114,12 @@ data "aws_iam_policy_document" "dappbot_api_allow_cloudwatch" {
 resource "aws_iam_policy" "dappbot_api_allow_sqs" {
   name = "allow-sqs-dappbot-api-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_api_allow_sqs.json}"
+  policy = data.aws_iam_policy_document.dappbot_api_allow_sqs.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_api_allow_sqs" {
-  role       = "${aws_iam_role.dappbot_private_api_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_api_allow_sqs.arn}"
+  role       = aws_iam_role.dappbot_private_api_iam.id
+  policy_arn = aws_iam_policy.dappbot_api_allow_sqs.arn
 }
 
 data "aws_iam_policy_document" "dappbot_api_allow_sqs" {
@@ -128,9 +131,10 @@ data "aws_iam_policy_document" "dappbot_api_allow_sqs" {
     effect = "Allow"
 
     actions = [
-      "sqs:SendMessage"
+      "sqs:SendMessage",
     ]
-    resources = ["${aws_sqs_queue.dappbot.arn}"]
+
+    resources = [aws_sqs_queue.dappbot.arn]
   }
 }
 
@@ -140,12 +144,12 @@ data "aws_iam_policy_document" "dappbot_api_allow_sqs" {
 resource "aws_iam_policy" "dappbot_api_allow_lambda_cognito" {
   name = "allow-cognito-dappbot-api-lambda-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_api_allow_cognito.json}"
+  policy = data.aws_iam_policy_document.dappbot_api_allow_cognito.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_api_allow_lambda_cognito" {
-  role       = "${aws_iam_role.dappbot_private_api_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_api_allow_lambda_cognito.arn}"
+  role       = aws_iam_role.dappbot_private_api_iam.id
+  policy_arn = aws_iam_policy.dappbot_api_allow_lambda_cognito.arn
 }
 
 data "aws_iam_policy_document" "dappbot_api_allow_cognito" {
@@ -157,9 +161,10 @@ data "aws_iam_policy_document" "dappbot_api_allow_cognito" {
     effect = "Allow"
 
     actions = [
-      "cognito-idp:AdminGetUser"
+      "cognito-idp:AdminGetUser",
     ]
-    resources = ["${aws_cognito_user_pool.registered_users.arn}"]
+
+    resources = [aws_cognito_user_pool.registered_users.arn]
   }
 }
 
@@ -169,25 +174,25 @@ data "aws_iam_policy_document" "dappbot_api_allow_cognito" {
 resource "aws_iam_role" "dappbot_public_api_iam" {
   name = "dappbot-api-public-iam-${var.subdomain}"
 
-  assume_role_policy = "${data.aws_iam_policy_document.dappbot_api_lambda_assume_role.json}"
+  assume_role_policy = data.aws_iam_policy_document.dappbot_api_lambda_assume_role.json
 
-  tags = "${local.default_tags}"
+  tags = local.default_tags
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_public_api_allow_cloudwatch" {
-  role       = "${aws_iam_role.dappbot_public_api_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_api_allow_cloudwatch.arn}"
+  role       = aws_iam_role.dappbot_public_api_iam.id
+  policy_arn = aws_iam_policy.dappbot_api_allow_cloudwatch.arn
 }
 
 resource "aws_iam_policy" "dappbot_public_api_allow_dynamodb" {
   name = "allow-dynamodb-dappbot-public-api-${var.subdomain}"
 
-  policy = "${data.aws_iam_policy_document.dappbot_public_api_allow_dynamodb.json}"
+  policy = data.aws_iam_policy_document.dappbot_public_api_allow_dynamodb.json
 }
 
 resource "aws_iam_role_policy_attachment" "dappbot_public_api_allow_dynamodb" {
-  role       = "${aws_iam_role.dappbot_public_api_iam.id}"
-  policy_arn = "${aws_iam_policy.dappbot_public_api_allow_dynamodb.arn}"
+  role       = aws_iam_role.dappbot_public_api_iam.id
+  policy_arn = aws_iam_policy.dappbot_public_api_allow_dynamodb.arn
 }
 
 data "aws_iam_policy_document" "dappbot_public_api_allow_dynamodb" {
@@ -199,24 +204,26 @@ data "aws_iam_policy_document" "dappbot_public_api_allow_dynamodb" {
     effect = "Allow"
 
     actions = [
-      "dynamodb:DescribeTable"
+      "dynamodb:DescribeTable",
     ]
-    resources = ["${aws_dynamodb_table.dapp_table.arn}"]
+
+    resources = [aws_dynamodb_table.dapp_table.arn]
   }
 
   statement {
-      sid = "2"
+    sid = "2"
 
-      effect = "Allow"
+    effect = "Allow"
 
-      actions = [
-          "dynamodb:BatchGetItem",
-          "dynamodb:GetItem",
-          "dynamodb:Query"
-      ]
-      resources = [
-        "${aws_dynamodb_table.dapp_table.arn}",
-        "${aws_dynamodb_table.dapp_table.arn}/*"
-      ]
+    actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:GetItem",
+      "dynamodb:Query",
+    ]
+
+    resources = [
+      aws_dynamodb_table.dapp_table.arn,
+      "${aws_dynamodb_table.dapp_table.arn}/*",
+    ]
   }
 }
