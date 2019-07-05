@@ -49,7 +49,7 @@ variable "dapphub_branch" {
 
 variable "dappbot_manager_subdomain" {
   description = "subdomain on which to host the DappBot Manager. The DappBot Manager DNS will be {dappbot_manager_subdomain}.{root_domain}"
-  default     = "hub-test"
+  default     = "dappbot-manager-test"
 }
 
 variable "dappbot_manager_branch" {
