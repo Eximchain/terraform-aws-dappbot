@@ -316,7 +316,8 @@ resource "aws_lambda_function" "dappbot_event_listener_lambda" {
 
   environment {
     variables = {
-      DDB_TABLE          = aws_dynamodb_table.dapp_table.id
+      DAPP_TABLE         = aws_dynamodb_table.dapp_table.id
+      LAPSED_USERS_TABLE = aws_dynamodb_table.lapsed_users_table.id
       R53_HOSTED_ZONE_ID = data.aws_route53_zone.hosted_zone.zone_id
       DNS_ROOT           = local.created_dns_root
       CODEBUILD_ID       = aws_codebuild_project.dappbot_builder.id
@@ -1053,6 +1054,19 @@ resource "aws_dynamodb_table" "dapp_table" {
   tags = local.default_tags
 }
 
+resource "aws_dynamodb_table" "lapsed_users_table" {
+  name         = "dappbot-lapsed-users-${var.subdomain}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "UserEmail"
+
+  attribute {
+    name = "UserEmail"
+    type = "S"
+  }
+
+  tags = local.default_tags
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # COGNITO RESOURCES FOR AUTH
 # ---------------------------------------------------------------------------------------------------------------------
@@ -1308,7 +1322,7 @@ resource "aws_cloudwatch_event_target" "sns" {
   target_id = "SendToSNS"
   arn       = aws_sns_topic.cleanup_event.arn
 
-  input = "{\"command\":\"cleanup\"}"
+  input = "{\"event\":\"CLEANUP\"}"
 }
 
 resource "aws_sns_topic_subscription" "cleanup_lambda" {
@@ -1326,7 +1340,7 @@ resource "aws_lambda_permission" "sns_invoke_cleanup_lambda" {
   source_arn = aws_sns_topic.cleanup_event.arn
 }
 
-resource "aws_sns_topic_policy" "default" {
+resource "aws_sns_topic_policy" "cleanup" {
   arn    = aws_sns_topic.cleanup_event.arn
   policy = data.aws_iam_policy_document.cleanup_topic_policy.json
 }
@@ -1342,5 +1356,51 @@ data "aws_iam_policy_document" "cleanup_topic_policy" {
     }
 
     resources = [aws_sns_topic.cleanup_event.arn]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# PAYMENT EVENTS
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_sns_topic" "payment_events" {
+  name = "dappbot-payment-events-${var.subdomain}"
+}
+
+resource "aws_sns_topic_subscription" "payment_events_lambda" {
+  topic_arn = aws_sns_topic.payment_events.arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.dappbot_event_listener_lambda.arn
+}
+
+resource "aws_lambda_permission" "sns_invoke_payment_events_lambda" {
+  statement_id  = "PaymentEventsAllowExecutionFromSns"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.dappbot_event_listener_lambda.function_name
+  principal     = "sns.amazonaws.com"
+
+  source_arn = aws_sns_topic.payment_events.arn
+}
+
+// TODO: Convert these two resources to use for_each syntax when it's available
+resource "aws_sns_topic_policy" "payment_events" {
+  count = length(var.payment_event_publishers)
+
+  arn    = aws_sns_topic.payment_events.arn
+  policy = element(data.aws_iam_policy_document.payment_event_topic_policy.*.json, count.index)
+}
+
+data "aws_iam_policy_document" "payment_event_topic_policy" {
+  count = length(var.payment_event_publishers)
+
+  statement {
+    effect  = "Allow"
+    actions = ["SNS:Publish"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["events.amazonaws.com"]
+    }
+
+    resources = [element(var.payment_event_publishers, count.index)]
   }
 }
