@@ -29,7 +29,7 @@ locals {
   wildcard_cert_arn  = var.create_wildcard_cert ? aws_acm_certificate.cloudfront_cert[0].arn : data.aws_acm_certificate.cloudfront_cert[0].arn
   provision_api_cert = var.existing_cert_domain == ""
 
-  alternate_api_cert_aliases = [local.dapphub_dns]
+  alternate_api_cert_aliases = [local.dapphub_dns, local.dappbot_manager_dns]
   all_api_cert_aliases       = concat([local.api_domain], local.alternate_api_cert_aliases)
   api_cert_arn = element(
     coalescelist(
@@ -40,7 +40,8 @@ locals {
     0,
   )
 
-  dapphub_dns = "${var.dapphub_subdomain}.${var.root_domain}"
+  dapphub_dns         = "${var.dapphub_subdomain}.${var.root_domain}"
+  dappbot_manager_dns = "${var.dappbot_manager_subdomain}.${var.root_domain}"
 
   image_url              = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
   api_gateway_source_arn = "${aws_api_gateway_rest_api.dapp_api.execution_arn}/*/*/*"
@@ -661,6 +662,343 @@ resource "aws_api_gateway_integration" "dapphub_integration" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# API GATEWAY RESPONSES
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_api_gateway_gateway_response" "access_denied" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "ACCESS_DENIED"
+  status_code   = "403"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "api_configuration_error" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "API_CONFIGURATION_ERROR"
+  status_code   = "500"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "authorizer_configuration_error" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "AUTHORIZER_CONFIGURATION_ERROR"
+  status_code   = "500"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "authorizer_failure" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "AUTHORIZER_FAILURE"
+  status_code   = "500"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "bad_request_parameters" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "BAD_REQUEST_PARAMETERS"
+  status_code   = "400"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "bad_request_body" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "BAD_REQUEST_BODY"
+  status_code   = "400"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "default_4xx" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "DEFAULT_4XX"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "default_5xx" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "DEFAULT_5XX"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "expired_token" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "EXPIRED_TOKEN"
+  status_code   = "403"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "integration_failure" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "INTEGRATION_FAILURE"
+  status_code   = "504"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "integration_timeout" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "INTEGRATION_TIMEOUT"
+  status_code   = "504"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "invalid_api_key" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "INVALID_API_KEY"
+  status_code   = "403"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "invalid_signature" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "INVALID_SIGNATURE"
+  status_code   = "403"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "missing_authentication_token" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "MISSING_AUTHENTICATION_TOKEN"
+  status_code   = "403"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "quota_exceeded" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "QUOTA_EXCEEDED"
+  status_code   = "429"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "request_too_large" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "REQUEST_TOO_LARGE"
+  status_code   = "413"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "resource_not_found" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "RESOURCE_NOT_FOUND"
+  status_code   = "404"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "throttled" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "THROTTLED"
+  status_code   = "429"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "unauthorized" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "UNAUTHORIZED"
+  status_code   = "401"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "unsupported_media_type" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "UNSUPPORTED_MEDIA_TYPE"
+  status_code   = "415"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "waf_filtered" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  response_type = "WAF_FILTERED"
+  status_code   = "403"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # CUSTOM DNS NAME
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_api_gateway_domain_name" "domain" {
@@ -910,6 +1248,28 @@ module "dapphub_website" {
 
   github_website_repo   = "dapphub-spa"
   github_website_branch = var.dapphub_branch
+  deployment_directory  = "build"
+  build_command         = "npm install && npm run build"
+
+  force_destroy_buckets = true
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# DAPPBOT MANAGER WEBSITE
+# ---------------------------------------------------------------------------------------------------------------------
+module "dappbot_manager" {
+  source = "git@github.com:Eximchain/terraform-aws-static-website.git"
+
+  dns_name    = local.dappbot_manager_dns
+  domain_root = var.root_domain
+
+  website_bucket_name = "dappbot-manager-${var.subdomain}"
+  log_bucket_name     = "dappbot-manager-logs-${var.subdomain}"
+
+  acm_cert_arn = local.api_cert_arn
+
+  github_website_repo   = "dappbot-management-spa"
+  github_website_branch = var.dappbot_manager_branch
   deployment_directory  = "build"
   build_command         = "npm install && npm run build"
 
