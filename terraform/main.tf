@@ -1251,6 +1251,11 @@ module "dapphub_website" {
   build_command         = "npm install && npm run build"
 
   force_destroy_buckets = true
+
+  env = {
+    REACT_APP_DAPPBOT_URL = "https://${local.api_domain}"
+    REACT_APP_WEB3_URL    = "https://gamma-tx-executor-us-east.eximchain-dev.com"
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -1273,6 +1278,17 @@ module "dappbot_manager" {
   build_command         = "npm install && npm run build"
 
   force_destroy_buckets = true
+
+  env = {
+    REACT_APP_DAPPSMITH_ENDPOINT         = "https://${local.api_domain}"
+    REACT_APP_AWS_REGION                 = var.aws_region
+    REACT_APP_USER_POOL_ID               = aws_cognito_user_pool.registered_users.id
+    REACT_APP_STRIPE_PUBLISHABLE_API_KEY = "TODO: Fill in"
+    REACT_APP_USER_POOL_CLIENT_ID        = aws_cognito_user_pool_client.api_client.id
+    REACT_APP_PAYMENT_ENDPOINT           = "TODO: Deploy & fill in "
+    REACT_APP_MAILCHIMP_URL              = "https://eximchain.us20.list-manage.com/subscribe/post?u=bcabb5ebaaec9e5f833f9d760&id=0bdb65877c"
+    REACT_APP_MAILCHIMP_AUDENCE_ID       = "b_bcabb5ebaaec9e5f833f9d760_0bdb65877c"
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
