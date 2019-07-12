@@ -318,6 +318,7 @@ resource "aws_lambda_function" "dappbot_event_listener_lambda" {
     variables = {
       DAPP_TABLE         = aws_dynamodb_table.dapp_table.id
       LAPSED_USERS_TABLE = aws_dynamodb_table.lapsed_users_table.id
+      SQS_QUEUE          = aws_sqs_queue.dappbot.id
       R53_HOSTED_ZONE_ID = data.aws_route53_zone.hosted_zone.zone_id
       DNS_ROOT           = local.created_dns_root
       CODEBUILD_ID       = aws_codebuild_project.dappbot_builder.id

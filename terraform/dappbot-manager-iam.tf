@@ -406,6 +406,12 @@ resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_codepipe
   policy_arn = aws_iam_policy.dappbot_allow_codepipeline.arn
 }
 
+# SQS
+resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_sqs" {
+  role       = aws_iam_role.dappbot_event_listener_iam.id
+  policy_arn = aws_iam_policy.dappbot_api_allow_sqs.arn
+}
+
 # DynamoDB Dapp Table
 resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_dynamodb" {
   role       = aws_iam_role.dappbot_event_listener_iam.id
@@ -451,11 +457,44 @@ data "aws_iam_policy_document" "dappbot_event_listener_allow_dynamodb_lapsed_use
       "dynamodb:PutItem",
       "dynamodb:UpdateItem",
       "dynamodb:Query",
+      "dynamodb:Scan",
     ]
     resources = [
       aws_dynamodb_table.lapsed_users_table.arn,
       "${aws_dynamodb_table.lapsed_users_table.arn}/*",
     ]
+  }
+}
+
+# Cognito
+resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_lambda_cognito" {
+  role       = aws_iam_role.dappbot_event_listener_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_lambda_cognito.arn
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_lambda_cognito_update_user_attributes" {
+  role       = aws_iam_role.dappbot_event_listener_iam.id
+  policy_arn = aws_iam_policy.dappbot_allow_lambda_cognito_update_user_attributes.arn
+}
+
+resource "aws_iam_policy" "dappbot_allow_lambda_cognito_update_user_attributes" {
+  name = "allow-cognito-dappbot-update-user-attrs-${var.subdomain}"
+
+  policy = data.aws_iam_policy_document.dappbot_allow_cognito_update_user_attributes.json
+}
+
+data "aws_iam_policy_document" "dappbot_allow_cognito_update_user_attributes" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "cognito-idp:AdminUpdateUserAttributes",
+    ]
+    resources = [aws_cognito_user_pool.registered_users.arn]
   }
 }
 
