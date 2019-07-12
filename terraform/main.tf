@@ -48,6 +48,7 @@ locals {
 
   base_lambda_uri    = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions"
   dappbot_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_api_lambda.arn}/invocations"
+  dappbot_auth_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_auth_api_lambda.arn}/invocations"
   dapphub_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.dapphub_view_lambda.arn}/invocations"
 }
 
@@ -166,6 +167,49 @@ resource "aws_lambda_permission" "api_gateway_invoke_dapphub_view_lambda" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.dapphub_view_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
+  source_arn = local.api_gateway_source_arn
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# DAPPHUB VIEW LAMBDA FUNCTION
+# ---------------------------------------------------------------------------------------------------------------------
+// TODO: Finish building out Lambda
+# Wait ensures that the role is fully created when Lambda tries to assume it.
+resource "null_resource" "dappbot_auth_api_wait" {
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+  depends_on = [aws_iam_role.dappbot_auth_api_iam]
+}
+
+resource "aws_lambda_function" "dappbot_auth_api_lambda" {
+  filename         = "dappbot-api-lambda.zip"
+  function_name    = "dappbot-auth-lambda-${var.subdomain}"
+  role             = aws_iam_role.dappbot_auth_api_iam.arn
+  handler          = "index.authHandler"
+  source_code_hash = filebase64sha256("dappbot-api-lambda.zip")
+  runtime          = "nodejs8.10"
+  timeout          = 5
+
+  environment {
+    variables = {
+      COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
+      COGNITO_CLIENT_ID = aws_cognito_user_pool_client.api_client.id
+    }
+  }
+
+  depends_on = [null_resource.dappbot_auth_api_wait]
+
+  tags = local.default_tags
+}
+
+resource "aws_lambda_permission" "api_gateway_invoke_dappbot_auth_lambda" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.dappbot_auth_api_lambda.function_name
   principal     = "apigateway.amazonaws.com"
 
   # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
@@ -660,6 +704,48 @@ resource "aws_api_gateway_integration" "dapphub_integration" {
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
   uri                     = local.dapphub_lambda_uri
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# API GATEWAY AUTH: DAPPBOT AUTH
+# ---------------------------------------------------------------------------------------------------------------------
+// TODO: Finish porting this to use dappbot_auth naming
+resource "aws_api_gateway_resource" "dappbot_auth_resource" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  parent_id   = aws_api_gateway_rest_api.dapp_api.root_resource_id
+  path_part   = "auth"
+}
+
+resource "aws_api_gateway_resource" "dappbot_auth_proxy_resource" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  parent_id   = aws_api_gateway_resource.dappbot_auth_resource.id
+  path_part   = "{proxy+}"
+}
+
+resource "aws_api_gateway_method" "dappbot_auth_method" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.dappbot_auth_proxy_resource.id
+  http_method = "ANY"
+
+  authorization = "NONE"
+
+  request_parameters = {
+    "method.request.path.proxy" = "method.request.path.proxy"
+  }
+}
+
+resource "aws_api_gateway_integration" "dappbot_auth_integration" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.dappbot_auth_proxy_resource.id
+  http_method = aws_api_gateway_method.dappbot_auth_method.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = local.dappbot_api_auth_lambda_uri
+
+  request_parameters = {
+    "integration.request.path.proxy" = "method.request.path.proxy"
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
