@@ -83,6 +83,11 @@ variable "payment_event_publishers" {
   type        = list(string)
 }
 
+variable "payment_lapsed_grace_period_hours" {
+  description = "Number of hours to wait after a LAPSED payment before deleting dapps"
+  default     = 72
+}
+
 # If singular, it's 1 hour, 1 minute, 1 week, 1 day, etc.
 variable "cleanup_interval" {
   description = <<DESCRIPTION
