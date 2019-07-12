@@ -730,7 +730,7 @@ resource "aws_api_gateway_method" "dappbot_auth_method" {
   authorization = "NONE"
 
   request_parameters = {
-    "method.request.path.proxy" = "method.request.path.proxy"
+    "method.request.path.proxy" = true
   }
 }
 
@@ -741,7 +741,7 @@ resource "aws_api_gateway_integration" "dappbot_auth_integration" {
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = local.dappbot_api_auth_lambda_uri
+  uri                     = local.dappbot_auth_lambda_uri
 
   request_parameters = {
     "integration.request.path.proxy" = "method.request.path.proxy"

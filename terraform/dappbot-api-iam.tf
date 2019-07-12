@@ -250,7 +250,7 @@ resource "aws_iam_role_policy_attachment" "dappbot_auth_api_allow_cognito" {
   policy_arn = aws_iam_policy.dappbot_auth_api_allow_cognito.arn
 }
 
-resource "aws_iam_policy_document" "dappbot_auth_api_allow_cognito" {
+data "aws_iam_policy_document" "dappbot_auth_api_allow_cognito" {
   version = "2012-10-17"
 
   statement {
