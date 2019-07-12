@@ -77,6 +77,12 @@ variable "service_github_token" {
   default     = ""
 }
 
+variable "payment_event_publishers" {
+  description = "A list of ARNs that should be allowed to publish payment events"
+  default     = []
+  type        = list(string)
+}
+
 # If singular, it's 1 hour, 1 minute, 1 week, 1 day, etc.
 variable "cleanup_interval" {
   description = <<DESCRIPTION
@@ -90,4 +96,3 @@ DESCRIPTION
 
   default = "rate(12 hours)"
 }
-

@@ -406,10 +406,57 @@ resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_codepipe
   policy_arn = aws_iam_policy.dappbot_allow_codepipeline.arn
 }
 
-# DynamoDB
+# DynamoDB Dapp Table
 resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_dynamodb" {
   role       = aws_iam_role.dappbot_event_listener_iam.id
   policy_arn = aws_iam_policy.dappbot_allow_dynamodb.arn
+}
+
+# DynamoDB Lapsed Users Table
+resource "aws_iam_policy" "dappbot_event_listener_allow_dynamodb_lapsed_users" {
+  name = "allow-dynamodb-lapsed-users-lambda-${var.subdomain}"
+
+  policy = data.aws_iam_policy_document.dappbot_event_listener_allow_dynamodb_lapsed_users.json
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_event_listener_allow_dynamodb_lapsed_users" {
+  role       = aws_iam_role.dappbot_event_listener_iam.id
+  policy_arn = aws_iam_policy.dappbot_event_listener_allow_dynamodb_lapsed_users.arn
+}
+
+data "aws_iam_policy_document" "dappbot_event_listener_allow_dynamodb_lapsed_users" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:DescribeTable",
+    ]
+    resources = [aws_dynamodb_table.lapsed_users_table.arn]
+  }
+
+  statement {
+    sid = "2"
+
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:BatchGetItem",
+      "dynamodb:BatchWriteItem",
+      "dynamodb:DeleteItem",
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+      "dynamodb:Query",
+    ]
+    resources = [
+      aws_dynamodb_table.lapsed_users_table.arn,
+      "${aws_dynamodb_table.lapsed_users_table.arn}/*",
+    ]
+  }
 }
 
 # Cloudfront
