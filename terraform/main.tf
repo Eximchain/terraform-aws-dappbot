@@ -361,18 +361,20 @@ resource "aws_lambda_function" "dappbot_event_listener_lambda" {
 
   environment {
     variables = {
-      DAPP_TABLE         = aws_dynamodb_table.dapp_table.id
-      LAPSED_USERS_TABLE = aws_dynamodb_table.lapsed_users_table.id
-      R53_HOSTED_ZONE_ID = data.aws_route53_zone.hosted_zone.zone_id
-      DNS_ROOT           = local.created_dns_root
-      CODEBUILD_ID       = aws_codebuild_project.dappbot_builder.id
-      PIPELINE_ROLE_ARN  = aws_iam_role.dappbot_codepipeline_iam.arn
-      ARTIFACT_BUCKET    = aws_s3_bucket.artifact_bucket.id
-      DAPPSEED_BUCKET    = aws_s3_bucket.dappseed_bucket.id
-      WILDCARD_CERT_ARN  = local.wildcard_cert_arn
-      COGNITO_USER_POOL  = aws_cognito_user_pool.registered_users.id
-      SENDGRID_API_KEY   = var.sendgrid_key
-      GITHUB_TOKEN       = var.service_github_token
+      DAPP_TABLE                      = aws_dynamodb_table.dapp_table.id
+      LAPSED_USERS_TABLE              = aws_dynamodb_table.lapsed_users_table.id
+      SQS_QUEUE                       = aws_sqs_queue.dappbot.id
+      R53_HOSTED_ZONE_ID              = data.aws_route53_zone.hosted_zone.zone_id
+      DNS_ROOT                        = local.created_dns_root
+      CODEBUILD_ID                    = aws_codebuild_project.dappbot_builder.id
+      PIPELINE_ROLE_ARN               = aws_iam_role.dappbot_codepipeline_iam.arn
+      ARTIFACT_BUCKET                 = aws_s3_bucket.artifact_bucket.id
+      DAPPSEED_BUCKET                 = aws_s3_bucket.dappseed_bucket.id
+      WILDCARD_CERT_ARN               = local.wildcard_cert_arn
+      COGNITO_USER_POOL               = aws_cognito_user_pool.registered_users.id
+      SENDGRID_API_KEY                = var.sendgrid_key
+      GITHUB_TOKEN                    = var.service_github_token
+      PAYMENT_LAPSED_GRACE_PERIOD_HRS = var.payment_lapsed_grace_period_hours
     }
   }
 
