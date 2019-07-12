@@ -8,7 +8,7 @@ Before `terraform apply`ing this module, the `dappsmith-builder` image needs to 
 
 Before trying to run `terraform apply`, you need to:
 
-- (1) Run "$export GITHUB_TOKEN=XXX", otherwise you'll run into github oauth issues.
+- (1) Run `export GITHUB_TOKEN=XXX`, otherwise you'll run into github oauth issues.
 - (2) Make sure you have a `terraform.tfvars` file which includes the below values:
   - **`npm_email`** & **`npm_pass`**: These should be set to the exim-service-account details, which can be found in 1pass.  The email is `robot@eximchain.com`.
   - **`codebuild_image`**: This should correspond to the built image, using the syntax `[repository-name]:tag` (e.g. `eximchain/dappsmith-builder:0.4`).  If you haven't made any changes to the Packer config, you can just check on the Console to see that the image is there.
@@ -18,12 +18,20 @@ Before trying to run `terraform apply`, you need to:
 
 
 ### Packer Build
-If you need to build the image yourself, first make sure that you set the following NPM auth variables:
+If you need to build the image yourself, first make sure that you set the following NPM auth variables in your terminal (e.g. `export NPM_EMAIL=test@example.com`):
 - `NPM_EMAIL`: Email for an account with read access to the `@eximchain/dappsmith` NPM package.
 - `NPM_USER`: Username of above account, which is distinct from the email.
 - `NPM_PASS`: Pass of above account.  Make sure to escape any special characters, echo the value to be certain it's what you need it to be.
 
-Check under the "NPM service account" in your 1password shared keys for all npm values.  Before running `packer build dappsmith-builder.json`, also  double-check that the `aws_account_id`, `aws_region`, `repository`, and `image_tag` variables are all set to appropriate values.
+You can find these value under the "NPM service account" in the Eximchain 1Password.  Also double-check that the `aws_account_id`, `aws_region`, `repository`, and `image_tag` variables are all set to appropriate values within the `variables` key of `packer/dappsmith-builder.json`.  Once that is complete, you can build:
+
+```sh
+$ cd packer
+$ packer build dappsmith-builder.json
+$ cd ../terraform
+$ ... double check everything from section above ...
+$ terraform apply
+```
 
 
 ## Dev Testing
