@@ -245,6 +245,11 @@ resource "aws_iam_policy" "dappbot_auth_api_allow_cognito" {
   policy = data.aws_iam_policy_document.dappbot_auth_api_allow_cognito.json
 }
 
+resource "aws_iam_role_policy_attachment" "dappbot_auth_api_allow_cloudwatch" {
+  role       = aws_iam_role.dappbot_auth_api_iam.id
+  policy_arn = aws_iam_policy.dappbot_api_allow_cloudwatch.arn
+}
+
 resource "aws_iam_role_policy_attachment" "dappbot_auth_api_allow_cognito" {
   role       = aws_iam_role.dappbot_auth_api_iam.id
   policy_arn = aws_iam_policy.dappbot_auth_api_allow_cognito.arn
