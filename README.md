@@ -2,21 +2,36 @@
 Terraform infrastructure to run DappBot
 
 ## Deployment
-Before `terraform apply`ing this module, the `dappsmith-builder` image needs to have been built into an [Amazon ECR](https://aws.amazon.com/ecr/) repository.  
+Before `terraform apply`ing this module, the `dappsmith-builder` image needs to have been built into an [Amazon ECR](https://aws.amazon.com/ecr/) repository.    The image probably already exists, but if you need to build it yourself, scroll down for Packer Build instructions.
 
-If you know this has already happened, just make sure to fillset `codebuild_image` in `terraform.tfvars` to `[repository-name]:tag` (e.g. `eximchain/dappsmith-builder:0.4`).
+### Terraform Apply
 
-If you need to build the image yourself, first make sure that you set the following NPM auth variables:
+Before trying to run `terraform apply`, you need to:
+
+- (1) Run `export GITHUB_TOKEN=XXX`, otherwise you'll run into github oauth issues.
+- (2) Make sure you have a `terraform.tfvars` file which includes the below values:
+  - **`npm_email`** & **`npm_pass`**: These should be set to the exim-service-account details, which can be found in 1pass.  The email is `robot@eximchain.com`.
+  - **`codebuild_image`**: This should correspond to the built image, using the syntax `[repository-name]:tag` (e.g. `eximchain/dappsmith-builder:0.4`).  If you haven't made any changes to the Packer config, you can just check on the Console to see that the image is there.
+  - **`subdomain`**: This subdomain is used on a variety of names, so you need to ensure that new resources won't collide with existing ones.  Set it to something unique and informative.
+  - **`existing_cert_domain`** & **`create_wildcard_cert`**: Unless you're trying to build onto a brand new root domain, you probably want to use one which we already have provisioned and certified.  Provisioning a certificate for the new domain can take 30 minutes, so you generally only want to do this if you know you need to.  You probably want to set `existing_...` to `"eximchain-dev.com"` and `create_...` to `false`.
+  - **`dapphub_subdomain`** & **`dappbot_manager_subdomain`**: If you're reusing an existing domain, you need to change these two subdomains from their default values in order to prevent a collision.
+
+
+### Packer Build
+If you need to build the image yourself, first make sure that you set the following NPM auth variables in your terminal (e.g. `export NPM_EMAIL=test@example.com`):
 - `NPM_EMAIL`: Email for an account with read access to the `@eximchain/dappsmith` NPM package.
 - `NPM_USER`: Username of above account, which is distinct from the email.
 - `NPM_PASS`: Pass of above account.  Make sure to escape any special characters, echo the value to be certain it's what you need it to be.
 
-Check under the "NPM service account" in your 1password shared keys for all npm values.
+You can find these value under the "NPM service account" in the Eximchain 1Password.  Also double-check that the `aws_account_id`, `aws_region`, `repository`, and `image_tag` variables are all set to appropriate values within the `variables` key of `packer/dappsmith-builder.json`.  Once that is complete, you can build:
 
-Also ensure that you have run "$export GITHUB_TOKEN=XXX" or you will run into github oauth issues when running the terraform apply.
-
-Before running `packer build dappsmith-builder.json`, double-check that the `aws_account_id`, `aws_region`, `repository`, and `image_tag` variables are all set to appropriate values.
-
+```sh
+$ cd packer
+$ packer build dappsmith-builder.json
+$ cd ../terraform
+$ ... double check everything from section above ...
+$ terraform apply
+```
 
 
 ## Dev Testing

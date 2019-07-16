@@ -139,7 +139,7 @@ data "aws_iam_policy_document" "dappbot_api_allow_sqs" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# LAMBDA IAM COGNITO ACCESS
+# PRIVATE LAMBDA IAM COGNITO ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "dappbot_api_allow_lambda_cognito" {
   name = "allow-cognito-dappbot-api-lambda-${var.subdomain}"
@@ -225,5 +225,54 @@ data "aws_iam_policy_document" "dappbot_public_api_allow_dynamodb" {
       aws_dynamodb_table.dapp_table.arn,
       "${aws_dynamodb_table.dapp_table.arn}/*",
     ]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# IAM FOR DAPPBOT AUTH API
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_role" "dappbot_auth_api_iam" {
+  name = "dappbot-api-auth-iam-${var.subdomain}"
+
+  assume_role_policy = data.aws_iam_policy_document.dappbot_api_lambda_assume_role.json
+
+  tags = local.default_tags
+}
+
+resource "aws_iam_policy" "dappbot_auth_api_allow_cognito" {
+  name = "allow-cognito-dappbot-auth-api-${var.subdomain}"
+
+  policy = data.aws_iam_policy_document.dappbot_auth_api_allow_cognito.json
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_auth_api_allow_cloudwatch" {
+  role       = aws_iam_role.dappbot_auth_api_iam.id
+  policy_arn = aws_iam_policy.dappbot_api_allow_cloudwatch.arn
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_auth_api_allow_cognito" {
+  role       = aws_iam_role.dappbot_auth_api_iam.id
+  policy_arn = aws_iam_policy.dappbot_auth_api_allow_cognito.arn
+}
+
+data "aws_iam_policy_document" "dappbot_auth_api_allow_cognito" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "cognito-idp:AdminInitiateAuth",
+      "cognito-idp:AdminConfirmSignUp",
+      "cognito-idp:AdminResetUserPassword",
+      "cognito-idp:AdminRespondToAuthChallenge",
+      "cognito-idp:AssociateSoftwareToken",
+      "cognito-idp:GetUser",
+      "cognito-idp:VerifySoftwareToken"
+    ]
+
+    resources = [aws_cognito_user_pool.registered_users.arn]
   }
 }
