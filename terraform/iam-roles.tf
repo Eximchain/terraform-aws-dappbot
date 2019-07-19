@@ -276,6 +276,12 @@ resource "aws_iam_role_policy_attachment" "stripe_payment_gateway_sns" {
   policy_arn = aws_iam_policy.sns_publish_payment_events.arn
 }
 
+# DynamoDB Read
+resource "aws_iam_role_policy_attachment" "stripe_payment_gateway_dynamodb" {
+  role       = aws_iam_role.stripe_payment_gateway_lambda_iam.id
+  policy_arn = aws_iam_policy.dynamodb_dapp_table_read_only.arn 
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # CODEPIPELINE IAM ROLE
 # ---------------------------------------------------------------------------------------------------------------------

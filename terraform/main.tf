@@ -51,6 +51,9 @@ locals {
   dappbot_auth_lambda_uri           = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_auth_api_lambda.arn}/invocations"
   dapphub_lambda_uri                = "${local.base_lambda_uri}/${aws_lambda_function.dapphub_view_lambda.arn}/invocations"
   payment_gateway_stripe_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.stripe_payment_gateway_lambda.arn}/invocations"
+  stripe_management_gateway_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.stripe_management_gateway_lambda.arn}/invocations"
+  stripe_webhook_gateway_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.stripe_webhook_gateway_lambda.arn}/invocations"
+  stripe_signup_gateway_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.stripe_signup_gateway_lambda.arn}/invocations"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
