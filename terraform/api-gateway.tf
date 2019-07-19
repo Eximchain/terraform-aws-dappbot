@@ -349,6 +349,58 @@ resource "aws_api_gateway_integration" "dappbot_auth_proxy_any" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# API GATEWAY: `/payment` PAYMENT GATEWAY API ROOT RESOURCE
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_api_gateway_resource" "payment" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  parent_id   = aws_api_gateway_rest_api.dapp_api.root_resource_id
+  path_part   = "payment"
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# API GATEWAY: `/payment/stripe/{proxy}` STRIPE PAYMENT GATEWAY API
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_api_gateway_resource" "payment_stripe" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  parent_id   = aws_api_gateway_resource.payment.id
+  path_part   = "stripe"
+}
+
+# TODO: Split into REST-like API
+resource "aws_api_gateway_resource" "payment_stripe_proxy" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  parent_id   = aws_api_gateway_resource.payment_stripe.id
+  path_part   = "{proxy+}"
+}
+
+resource "aws_api_gateway_method" "payment_stripe_proxy_any" {
+  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
+  resource_id   = aws_api_gateway_resource.payment_stripe_proxy.id
+  http_method   = "ANY"
+  authorization = "NONE"
+
+  request_parameters = {
+    "method.request.path.proxy"              = true
+    "method.request.header.Stripe-Signature" = true
+  }
+}
+
+resource "aws_api_gateway_integration" "payment_stripe_proxy_any" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.payment_stripe_proxy.id
+  http_method = aws_api_gateway_method.payment_stripe_proxy_any.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = local.payment_gateway_stripe_lambda_uri
+
+  request_parameters = {
+    "integration.request.path.proxy"              = "method.request.path.proxy"
+    "integration.request.header.Stripe-Signature" = "method.request.header.Stripe-Signature"
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # API GATEWAY RESPONSES
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_api_gateway_gateway_response" "access_denied" {
@@ -743,6 +795,17 @@ resource "aws_lambda_permission" "api_gateway_invoke_dappbot_auth_lambda" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.dappbot_auth_api_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
+  source_arn = local.api_gateway_source_arn
+}
+
+# Stripe Payment Gateway API
+resource "aws_lambda_permission" "api_gateway_invoke_stripe_payment_gateway_lambda" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.stripe_payment_gateway_lambda.function_name
   principal     = "apigateway.amazonaws.com"
 
   # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html

@@ -46,10 +46,11 @@ locals {
   image_url              = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
   api_gateway_source_arn = "${aws_api_gateway_rest_api.dapp_api.execution_arn}/*/*/*"
 
-  base_lambda_uri    = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions"
-  dappbot_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_api_lambda.arn}/invocations"
-  dappbot_auth_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_auth_api_lambda.arn}/invocations"
-  dapphub_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.dapphub_view_lambda.arn}/invocations"
+  base_lambda_uri                   = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions"
+  dappbot_lambda_uri                = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_api_lambda.arn}/invocations"
+  dappbot_auth_lambda_uri           = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_auth_api_lambda.arn}/invocations"
+  dapphub_lambda_uri                = "${local.base_lambda_uri}/${aws_lambda_function.dapphub_view_lambda.arn}/invocations"
+  payment_gateway_stripe_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.stripe_payment_gateway_lambda.arn}/invocations"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -348,6 +349,32 @@ resource "aws_lambda_function" "dappbot_event_listener_lambda" {
   }
 
   depends_on = [null_resource.dappbot_event_listener_wait]
+
+  tags = local.default_tags
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# PAYMENT GATEWAY STRIPE LAMBDA FUNCTION
+# ---------------------------------------------------------------------------------------------------------------------
+resource "null_resource" "payment_gateway_stripe_wait" {
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+  depends_on = [aws_iam_role.stripe_payment_gateway_lambda_iam]
+}
+
+resource "aws_lambda_function" "stripe_payment_gateway_lambda" {
+  filename         = "payment-gateway-stripe-lambda.zip"
+  function_name    = "stripe-payment-gateway-lambda-${var.subdomain}"
+  role             = aws_iam_role.stripe_payment_gateway_lambda_iam.arn
+  handler          = "index.handler"
+  source_code_hash = filebase64sha256("payment-gateway-stripe-lambda.zip")
+  runtime          = "nodejs8.10"
+  timeout          = 900
+
+  # TODO: Env vars
+
+  depends_on = [null_resource.payment_gateway_stripe_wait]
 
   tags = local.default_tags
 }

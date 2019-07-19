@@ -248,6 +248,29 @@ resource "aws_iam_role_policy_attachment" "dappbot_event_listener_s3" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# STRIPE PAYMENT GATEWAY IAM ROLE
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_role" "stripe_payment_gateway_lambda_iam" {
+  name = "stripe-payment-gateway-lambda-iam-${var.subdomain}"
+
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
+
+  tags = local.default_tags
+}
+
+# Cloudwatch (Logs)
+resource "aws_iam_role_policy_attachment" "stripe_payment_gateway_cloudwatch_logs" {
+  role       = aws_iam_role.stripe_payment_gateway_lambda_iam.id
+  policy_arn = aws_iam_policy.lambda_allow_write_cloudwatch_logs.arn
+}
+
+# Cognito
+resource "aws_iam_role_policy_attachment" "stripe_payment_gateway_cognito" {
+  role       = aws_iam_role.stripe_payment_gateway_lambda_iam.id
+  policy_arn = aws_iam_policy.cognito_manage_users.arn
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # CODEPIPELINE IAM ROLE
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_role" "dappbot_codepipeline_iam" {

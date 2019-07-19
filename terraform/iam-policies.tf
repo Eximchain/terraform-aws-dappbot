@@ -311,6 +311,35 @@ data "aws_iam_policy_document" "cognito_allow_auth" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# COGNITO MANAGE USERS
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "cognito_manage_users" {
+  name = "cognito-stripe-payment-gateway-${var.subdomain}"
+
+  policy     = data.aws_iam_policy_document.cognito_manage_users.json
+}
+
+data "aws_iam_policy_document" "cognito_manage_users" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "cognito-idp:AdminCreateUser",
+      "cognito-idp:AdminDeleteUser",
+      "cognito-idp:AdminGetUser",
+      "cognito-idp:SignUp",
+      "cognito-idp:VerifyUserAttribute",
+    ]
+
+    resources = [aws_cognito_user_pool.registered_users.arn]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # S3 MANAGE DAPPSEEDS AND DAPP BUCKETS
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "manage_s3_dappseeds_and_buckets" {
