@@ -360,7 +360,7 @@ resource "aws_api_gateway_resource" "payment" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# API GATEWAY: `ANY /payment/stripe/` STRIPE SIGNUP GATEWAY API
+# API GATEWAY: `/payment/stripe/ POST` STRIPE SIGNUP GATEWAY API
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_api_gateway_resource" "payment_stripe" {
   rest_api_id = aws_api_gateway_rest_api.dapp_api.id
@@ -368,6 +368,31 @@ resource "aws_api_gateway_resource" "payment_stripe" {
   path_part   = "stripe"
 }
 
+resource "aws_api_gateway_method" "payment_stripe_post" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.payment_stripe.id
+  http_method = "POST"
+
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "payment_stripe_post" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.payment_stripe.id
+  http_method = aws_api_gateway_method.payment_stripe_post.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = local.stripe_signup_gateway_lambda_uri
+
+  depends_on = [
+    aws_api_gateway_method.payment_stripe_post
+  ]
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# API GATEWAY: `/payment/stripe/ ANY` STRIPE MANAGEMENT GATEWAY API
+# ---------------------------------------------------------------------------------------------------------------------
 resource "aws_api_gateway_method" "payment_stripe_any" {
   rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
   resource_id   = aws_api_gateway_resource.payment_stripe.id
@@ -412,7 +437,7 @@ resource "aws_api_gateway_integration" "payment_stripe_any" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# API GATEWAY: `/payment/stripe/` CORS PREFLIGHT HANDLING
+# API GATEWAY: `/payment/stripe/ OPTIONS` CORS PREFLIGHT HANDLING
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_api_gateway_method" "payment_stripe_cors" {
@@ -479,14 +504,35 @@ resource "aws_api_gateway_integration_response" "payment_stripe_cors" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# API GATEWAY: `POST /payment/stripe/` STRIPE MANAGEMENT GATEWAY API
-# ---------------------------------------------------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------------------------------------------------
 # API GATEWAY: `ANY /payment/stripe/webhook` STRIPE WEBHOOK GATEWAY API
 # ---------------------------------------------------------------------------------------------------------------------
+resource "aws_api_gateway_resource" "payment_stripe_webhook" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  parent_id   = aws_api_gateway_resource.payment_stripe.id
+  path_part   = "webhook"
+}
 
+resource "aws_api_gateway_method" "payment_stripe_webhook_any" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.payment_stripe_webhook.id
+  http_method = "ANY"
+
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "payment_stripe_webhook_any" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.payment_stripe_webhook.id
+  http_method = aws_api_gateway_method.payment_stripe_webhook_any.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = local.dapphub_lambda_uri
+
+  depends_on = [
+    aws_api_gateway_method.payment_stripe_webhook_any
+  ]
+}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # API GATEWAY RESPONSES
