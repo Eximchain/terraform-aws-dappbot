@@ -77,12 +77,6 @@ variable "service_github_token" {
   default     = ""
 }
 
-variable "payment_event_publishers" {
-  description = "A list of ARNs that should be allowed to publish payment events"
-  default     = []
-  type        = list(string)
-}
-
 variable "payment_lapsed_grace_period_hours" {
   description = "Number of hours to wait after a LAPSED payment before deleting dapps"
   default     = 72

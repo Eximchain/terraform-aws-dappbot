@@ -713,6 +713,27 @@ data "aws_iam_policy_document" "s3_full_access_managed_buckets" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# SNS PUBLISH PAYMENT EVENTS
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "sns_publish_payment_events" {
+  name = "sns-publish-payment-events-${var.subdomain}"
+
+  policy = data.aws_iam_policy_document.sns_publish_payment_events.json
+}
+
+data "aws_iam_policy_document" "sns_publish_payment_events" {
+  statement {
+    sid = "1"
+
+    effect  = "Allow"
+
+    actions   = ["sns:Publish"]
+
+    resources = [aws_sns_topic.payment_events.arn]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # CODEBUILD BUILD START
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "codebuild_build_part" {

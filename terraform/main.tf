@@ -877,12 +877,14 @@ resource "aws_cloudwatch_event_target" "sns" {
   input = "{\"event\":\"CLEANUP\"}"
 }
 
+# Subscriptions
 resource "aws_sns_topic_subscription" "cleanup_lambda" {
   topic_arn = aws_sns_topic.cleanup_event.arn
   protocol  = "lambda"
   endpoint  = aws_lambda_function.dappbot_event_listener_lambda.arn
 }
 
+# Permissions
 resource "aws_lambda_permission" "sns_invoke_cleanup_lambda" {
   statement_id  = "CleanupAllowExecutionFromSns"
   action        = "lambda:InvokeFunction"
@@ -892,22 +894,24 @@ resource "aws_lambda_permission" "sns_invoke_cleanup_lambda" {
   source_arn = aws_sns_topic.cleanup_event.arn
 }
 
-resource "aws_sns_topic_policy" "cleanup" {
+resource "aws_sns_topic_policy" "cloudwatch_events_publish_cleanup" {
   arn    = aws_sns_topic.cleanup_event.arn
-  policy = data.aws_iam_policy_document.cleanup_topic_policy.json
+  policy = data.aws_iam_policy_document.cloudwatch_events_publish_cleanup.json
 }
 
-data "aws_iam_policy_document" "cleanup_topic_policy" {
+data "aws_iam_policy_document" "cloudwatch_events_publish_cleanup" {
   statement {
+    sid = "1"
+
     effect  = "Allow"
-    actions = ["SNS:Publish"]
+
+    actions   = ["sns:Publish"]
+    resources = [aws_sns_topic.cleanup_event.arn]
 
     principals {
       type        = "Service"
       identifiers = ["events.amazonaws.com"]
     }
-
-    resources = [aws_sns_topic.cleanup_event.arn]
   }
 }
 
@@ -918,41 +922,19 @@ resource "aws_sns_topic" "payment_events" {
   name = "dappbot-payment-events-${var.subdomain}"
 }
 
+# Subscriptions
 resource "aws_sns_topic_subscription" "payment_events_lambda" {
   topic_arn = aws_sns_topic.payment_events.arn
   protocol  = "lambda"
   endpoint  = aws_lambda_function.dappbot_event_listener_lambda.arn
 }
 
-resource "aws_lambda_permission" "sns_invoke_payment_events_lambda" {
+# Permissions
+resource "aws_lambda_permission" "sns_payment_events_invoke_event_listener_lambda" {
   statement_id  = "PaymentEventsAllowExecutionFromSns"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.dappbot_event_listener_lambda.function_name
   principal     = "sns.amazonaws.com"
 
   source_arn = aws_sns_topic.payment_events.arn
-}
-
-// TODO: Convert these two resources to use for_each syntax when it's available
-resource "aws_sns_topic_policy" "payment_events" {
-  count = length(var.payment_event_publishers)
-
-  arn    = aws_sns_topic.payment_events.arn
-  policy = element(data.aws_iam_policy_document.payment_event_topic_policy.*.json, count.index)
-}
-
-data "aws_iam_policy_document" "payment_event_topic_policy" {
-  count = length(var.payment_event_publishers)
-
-  statement {
-    effect  = "Allow"
-    actions = ["SNS:Publish"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["events.amazonaws.com"]
-    }
-
-    resources = [element(var.payment_event_publishers, count.index)]
-  }
 }
