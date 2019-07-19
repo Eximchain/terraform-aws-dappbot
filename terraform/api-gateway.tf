@@ -801,11 +801,33 @@ resource "aws_lambda_permission" "api_gateway_invoke_dappbot_auth_lambda" {
   source_arn = local.api_gateway_source_arn
 }
 
-# Stripe Payment Gateway API
-resource "aws_lambda_permission" "api_gateway_invoke_stripe_payment_gateway_lambda" {
+# Stripe Signup Gateway API
+resource "aws_lambda_permission" "api_gateway_invoke_stripe_signup_gateway_lambda" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.stripe_payment_gateway_lambda.function_name
+  function_name = aws_lambda_function.stripe_signup_gateway_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
+  source_arn = local.api_gateway_source_arn
+}
+
+# Stripe Management Gateway API
+resource "aws_lambda_permission" "api_gateway_invoke_stripe_management_gateway_lambda" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.stripe_management_gateway_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
+  source_arn = local.api_gateway_source_arn
+}
+
+# Stripe Webhook Gateway API
+resource "aws_lambda_permission" "api_gateway_invoke_stripe_webhook_gateway_lambda" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.stripe_webhook_gateway_lambda.function_name
   principal     = "apigateway.amazonaws.com"
 
   # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html

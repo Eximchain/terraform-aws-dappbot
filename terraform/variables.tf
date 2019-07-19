@@ -95,3 +95,13 @@ DESCRIPTION
 
   default = "rate(12 hours)"
 }
+
+variable "stripe_api_key" {
+  description = "Secret key to make server-side calls to the Stripe API. Must be set for Stripe interactions to succeed."
+  default     = ""
+}
+
+variable "stripe_webhook_secret" {
+  description = "Stripe secret used to decrypt webhook payloads.  One per webhook."
+  default     = ""
+}
