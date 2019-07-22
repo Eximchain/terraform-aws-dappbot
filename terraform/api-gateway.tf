@@ -525,7 +525,7 @@ resource "aws_api_gateway_integration" "payment_stripe_webhook_any" {
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = local.dapphub_lambda_uri
+  uri                     = local.stripe_webhook_gateway_lambda_uri
 
   depends_on = [
     aws_api_gateway_method.payment_stripe_webhook_any

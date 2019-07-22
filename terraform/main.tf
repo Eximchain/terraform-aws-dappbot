@@ -431,7 +431,7 @@ resource "aws_lambda_function" "stripe_webhook_gateway_lambda" {
     variables = {
       SNS_TOPIC_ARN                   = aws_sns_topic.payment_events.arn
       STRIPE_API_KEY                  = var.stripe_api_key
-      STRIKE_WEBHOOK_SECRET           = var.stripe_webhook_secret
+      STRIPE_WEBHOOK_SECRET           = var.stripe_webhook_secret
     }
   }
 
