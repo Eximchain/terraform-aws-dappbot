@@ -96,8 +96,6 @@ resource "aws_api_gateway_resource" "dappbot_private_proxy" {
   path_part   = "{proxy+}"
 }
 
-TODO: Placeholder to jump back and find auth config
-
 resource "aws_api_gateway_method" "dappbot_private_proxy_any" {
   rest_api_id = aws_api_gateway_rest_api.dapp_api.id
   resource_id = aws_api_gateway_resource.dappbot_private_proxy.id
