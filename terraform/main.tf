@@ -379,8 +379,8 @@ resource "aws_lambda_function" "stripe_signup_gateway_lambda" {
 
   environment {
     variables = {
-      COGNITO_USER_POOL               = aws_cognito_user_pool.registered_users.id
-      STRIPE_API_KEY                  = var.stripe_api_key
+      COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
+      STRIPE_API_KEY    = var.stripe_api_key
     }
   }
 
@@ -403,10 +403,10 @@ resource "aws_lambda_function" "stripe_management_gateway_lambda" {
 
   environment {
     variables = {
-      DAPP_TABLE                      = aws_dynamodb_table.dapp_table.id
-      COGNITO_USER_POOL               = aws_cognito_user_pool.registered_users.id
-      SNS_TOPIC_ARN                   = aws_sns_topic.payment_events.arn
-      STRIPE_API_KEY                  = var.stripe_api_key
+      DAPP_TABLE        = aws_dynamodb_table.dapp_table.id
+      COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
+      SNS_TOPIC_ARN     = aws_sns_topic.payment_events.arn
+      STRIPE_API_KEY    = var.stripe_api_key
     }
   }
 
@@ -429,9 +429,9 @@ resource "aws_lambda_function" "stripe_webhook_gateway_lambda" {
 
   environment {
     variables = {
-      SNS_TOPIC_ARN                   = aws_sns_topic.payment_events.arn
-      STRIPE_API_KEY                  = var.stripe_api_key
-      STRIPE_WEBHOOK_SECRET           = var.stripe_webhook_secret
+      SNS_TOPIC_ARN         = aws_sns_topic.payment_events.arn
+      STRIPE_API_KEY        = var.stripe_api_key
+      STRIPE_WEBHOOK_SECRET = var.stripe_webhook_secret
     }
   }
 

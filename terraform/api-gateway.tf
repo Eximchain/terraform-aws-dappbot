@@ -24,7 +24,19 @@ resource "aws_api_gateway_deployment" "dapp_api_deploy_v1" {
     aws_api_gateway_method.dappbot_private_cors,
 
     aws_api_gateway_integration.dappbot_auth_proxy_any,
-    aws_api_gateway_method.dappbot_auth_proxy_any
+    aws_api_gateway_method.dappbot_auth_proxy_any,
+
+    aws_api_gateway_integration.payment_stripe_any,
+    aws_api_gateway_method.payment_stripe_any,
+
+    aws_api_gateway_integration.payment_stripe_post,
+    aws_api_gateway_method.payment_stripe_post,
+
+    aws_api_gateway_integration.payment_stripe_cors,
+    aws_api_gateway_method.payment_stripe_cors,
+
+    aws_api_gateway_integration.payment_stripe_webhook_any,
+    aws_api_gateway_method.payment_stripe_webhook_any
   ]
 
   rest_api_id = aws_api_gateway_rest_api.dapp_api.id
