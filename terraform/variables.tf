@@ -34,12 +34,12 @@ variable "root_domain" {
 
 variable "subdomain" {
   description = "subdomain on which to host the API. The API DNS will be {subdomain}.{root_domain}"
-  default     = "api-test"
+  default     = "dappbot-api"
 }
 
 variable "dapphub_subdomain" {
   description = "subdomain on which to host the Dapphub. The Dapphub DNS will be {dapphub_subdomain}.{root_domain}"
-  default     = "hub-test"
+  default     = "dapphub"
 }
 
 variable "dapphub_branch" {
@@ -49,7 +49,7 @@ variable "dapphub_branch" {
 
 variable "dappbot_manager_subdomain" {
   description = "subdomain on which to host the DappBot Manager. The DappBot Manager DNS will be {dappbot_manager_subdomain}.{root_domain}"
-  default     = "dappbot-manager-test"
+  default     = "dappbot-manager"
 }
 
 variable "dappbot_manager_branch" {
@@ -77,6 +77,11 @@ variable "service_github_token" {
   default     = ""
 }
 
+variable "payment_lapsed_grace_period_hours" {
+  description = "Number of hours to wait after a LAPSED payment before deleting dapps"
+  default     = 72
+}
+
 # If singular, it's 1 hour, 1 minute, 1 week, 1 day, etc.
 variable "cleanup_interval" {
   description = <<DESCRIPTION
@@ -91,3 +96,12 @@ DESCRIPTION
   default = "rate(12 hours)"
 }
 
+variable "stripe_api_key" {
+  description = "Secret key to make server-side calls to the Stripe API. Must be set for Stripe interactions to succeed."
+  default     = ""
+}
+
+variable "stripe_webhook_secret" {
+  description = "Stripe secret used to decrypt webhook payloads.  One per webhook."
+  default     = ""
+}

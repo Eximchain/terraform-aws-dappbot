@@ -40,15 +40,19 @@ locals {
     0,
   )
 
-  dapphub_dns         = "${var.dapphub_subdomain}.${var.root_domain}"
-  dappbot_manager_dns = "${var.dappbot_manager_subdomain}.${var.root_domain}"
+  dapphub_dns         = var.dappbot_manager_subdomain == "" ? var.root_domain : "${var.dapphub_subdomain}.${var.root_domain}"
+  dappbot_manager_dns = var.dappbot_manager_subdomain == "" ? var.root_domain : "${var.dappbot_manager_subdomain}.${var.root_domain}"
 
   image_url              = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
   api_gateway_source_arn = "${aws_api_gateway_rest_api.dapp_api.execution_arn}/*/*/*"
 
-  base_lambda_uri    = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions"
-  dappbot_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_api_lambda.arn}/invocations"
-  dapphub_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.dapphub_view_lambda.arn}/invocations"
+  base_lambda_uri                      = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions"
+  dappbot_lambda_uri                   = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_api_lambda.arn}/invocations"
+  dappbot_auth_lambda_uri              = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_auth_api_lambda.arn}/invocations"
+  dapphub_lambda_uri                   = "${local.base_lambda_uri}/${aws_lambda_function.dapphub_view_lambda.arn}/invocations"
+  stripe_management_gateway_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.stripe_management_gateway_lambda.arn}/invocations"
+  stripe_webhook_gateway_lambda_uri    = "${local.base_lambda_uri}/${aws_lambda_function.stripe_webhook_gateway_lambda.arn}/invocations"
+  stripe_signup_gateway_lambda_uri     = "${local.base_lambda_uri}/${aws_lambda_function.stripe_signup_gateway_lambda.arn}/invocations"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -108,25 +112,17 @@ resource "aws_lambda_function" "dappbot_api_lambda" {
   environment {
     variables = {
       COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
+      COGNITO_CLIENT_ID = aws_cognito_user_pool_client.api_client.id
       DDB_TABLE         = aws_dynamodb_table.dapp_table.id
       DNS_ROOT          = local.created_dns_root
       SQS_QUEUE         = aws_sqs_queue.dappbot.id
+      DAPPHUB_DNS       = local.dapphub_dns
     }
   }
 
   depends_on = [null_resource.dappbot_private_api_wait]
 
   tags = local.default_tags
-}
-
-resource "aws_lambda_permission" "api_gateway_invoke_dappbot_api_lambda" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.dappbot_api_lambda.function_name
-  principal     = "apigateway.amazonaws.com"
-
-  # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
-  source_arn = local.api_gateway_source_arn
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -161,14 +157,36 @@ resource "aws_lambda_function" "dapphub_view_lambda" {
   tags = local.default_tags
 }
 
-resource "aws_lambda_permission" "api_gateway_invoke_dapphub_view_lambda" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.dapphub_view_lambda.function_name
-  principal     = "apigateway.amazonaws.com"
+# ---------------------------------------------------------------------------------------------------------------------
+# DAPPBOT AUTH LAMBDA FUNCTION
+# ---------------------------------------------------------------------------------------------------------------------
+# Wait ensures that the role is fully created when Lambda tries to assume it.
+resource "null_resource" "dappbot_auth_api_wait" {
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+  depends_on = [aws_iam_role.dappbot_auth_api_iam]
+}
 
-  # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
-  source_arn = local.api_gateway_source_arn
+resource "aws_lambda_function" "dappbot_auth_api_lambda" {
+  filename         = "dappbot-api-lambda.zip"
+  function_name    = "dappbot-auth-lambda-${var.subdomain}"
+  role             = aws_iam_role.dappbot_auth_api_iam.arn
+  handler          = "index.authHandler"
+  source_code_hash = filebase64sha256("dappbot-api-lambda.zip")
+  runtime          = "nodejs8.10"
+  timeout          = 5
+
+  environment {
+    variables = {
+      COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
+      COGNITO_CLIENT_ID = aws_cognito_user_pool_client.api_client.id
+    }
+  }
+
+  depends_on = [null_resource.dappbot_auth_api_wait]
+
+  tags = local.default_tags
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -316,21 +334,109 @@ resource "aws_lambda_function" "dappbot_event_listener_lambda" {
 
   environment {
     variables = {
-      DDB_TABLE          = aws_dynamodb_table.dapp_table.id
-      R53_HOSTED_ZONE_ID = data.aws_route53_zone.hosted_zone.zone_id
-      DNS_ROOT           = local.created_dns_root
-      CODEBUILD_ID       = aws_codebuild_project.dappbot_builder.id
-      PIPELINE_ROLE_ARN  = aws_iam_role.dappbot_codepipeline_iam.arn
-      ARTIFACT_BUCKET    = aws_s3_bucket.artifact_bucket.id
-      DAPPSEED_BUCKET    = aws_s3_bucket.dappseed_bucket.id
-      WILDCARD_CERT_ARN  = local.wildcard_cert_arn
-      COGNITO_USER_POOL  = aws_cognito_user_pool.registered_users.id
-      SENDGRID_API_KEY   = var.sendgrid_key
-      GITHUB_TOKEN       = var.service_github_token
+      DAPP_TABLE                      = aws_dynamodb_table.dapp_table.id
+      LAPSED_USERS_TABLE              = aws_dynamodb_table.lapsed_users_table.id
+      SQS_QUEUE                       = aws_sqs_queue.dappbot.id
+      R53_HOSTED_ZONE_ID              = data.aws_route53_zone.hosted_zone.zone_id
+      DNS_ROOT                        = local.created_dns_root
+      CODEBUILD_ID                    = aws_codebuild_project.dappbot_builder.id
+      PIPELINE_ROLE_ARN               = aws_iam_role.dappbot_codepipeline_iam.arn
+      ARTIFACT_BUCKET                 = aws_s3_bucket.artifact_bucket.id
+      DAPPSEED_BUCKET                 = aws_s3_bucket.dappseed_bucket.id
+      WILDCARD_CERT_ARN               = local.wildcard_cert_arn
+      COGNITO_USER_POOL               = aws_cognito_user_pool.registered_users.id
+      SENDGRID_API_KEY                = var.sendgrid_key
+      GITHUB_TOKEN                    = var.service_github_token
+      PAYMENT_LAPSED_GRACE_PERIOD_HRS = var.payment_lapsed_grace_period_hours
     }
   }
 
   depends_on = [null_resource.dappbot_event_listener_wait]
+
+  tags = local.default_tags
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# PAYMENT STRIPE LAMBDA FUNCTION SHARED WAIT
+# ---------------------------------------------------------------------------------------------------------------------
+resource "null_resource" "payment_gateway_stripe_wait" {
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+  depends_on = [aws_iam_role.stripe_payment_gateway_lambda_iam]
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# PAYMENT STRIPE SIGNUP LAMBDA FUNCTION
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_lambda_function" "stripe_signup_gateway_lambda" {
+  filename         = "payment-gateway-stripe-lambda.zip"
+  function_name    = "stripe-signup-gateway-lambda-${var.subdomain}"
+  role             = aws_iam_role.stripe_payment_gateway_lambda_iam.arn
+  handler          = "index.signupHandler"
+  source_code_hash = filebase64sha256("payment-gateway-stripe-lambda.zip")
+  runtime          = "nodejs8.10"
+  timeout          = 900
+
+  environment {
+    variables = {
+      COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
+      STRIPE_API_KEY    = var.stripe_api_key
+    }
+  }
+
+  depends_on = [null_resource.payment_gateway_stripe_wait]
+
+  tags = local.default_tags
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# PAYMENT STRIPE MANAGEMENT LAMBDA FUNCTION
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_lambda_function" "stripe_management_gateway_lambda" {
+  filename         = "payment-gateway-stripe-lambda.zip"
+  function_name    = "stripe-management-gateway-lambda-${var.subdomain}"
+  role             = aws_iam_role.stripe_payment_gateway_lambda_iam.arn
+  handler          = "index.managementHandler"
+  source_code_hash = filebase64sha256("payment-gateway-stripe-lambda.zip")
+  runtime          = "nodejs8.10"
+  timeout          = 900
+
+  environment {
+    variables = {
+      DAPP_TABLE        = aws_dynamodb_table.dapp_table.id
+      COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
+      SNS_TOPIC_ARN     = aws_sns_topic.payment_events.arn
+      STRIPE_API_KEY    = var.stripe_api_key
+    }
+  }
+
+  depends_on = [null_resource.payment_gateway_stripe_wait]
+
+  tags = local.default_tags
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# PAYMENT STRIPE WEBHOOK LAMBDA FUNCTION
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_lambda_function" "stripe_webhook_gateway_lambda" {
+  filename         = "payment-gateway-stripe-lambda.zip"
+  function_name    = "stripe-webhook-gateway-lambda-${var.subdomain}"
+  role             = aws_iam_role.stripe_payment_gateway_lambda_iam.arn
+  handler          = "index.webhookHandler"
+  source_code_hash = filebase64sha256("payment-gateway-stripe-lambda.zip")
+  runtime          = "nodejs8.10"
+  timeout          = 900
+
+  environment {
+    variables = {
+      SNS_TOPIC_ARN         = aws_sns_topic.payment_events.arn
+      STRIPE_API_KEY        = var.stripe_api_key
+      STRIPE_WEBHOOK_SECRET = var.stripe_webhook_secret
+    }
+  }
+
+  depends_on = [null_resource.payment_gateway_stripe_wait]
 
   tags = local.default_tags
 }
@@ -535,497 +641,6 @@ resource "aws_route53_record" "api_cert_validation" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# API GATEWAY
-# ---------------------------------------------------------------------------------------------------------------------
-resource "aws_api_gateway_rest_api" "dapp_api" {
-  name        = "dappbot-${var.subdomain}"
-  description = "Proxy to handle requests to the Dappbot & Dapphub API"
-}
-
-resource "aws_api_gateway_deployment" "dapp_api_deploy_v1" {
-  depends_on = [
-    aws_api_gateway_integration.dapphub_integration,
-    aws_api_gateway_integration.dappbot_integration,
-    aws_api_gateway_integration.dappbot_private_list_integration,
-    aws_api_gateway_method.dapphub_method,
-    aws_api_gateway_method.dappbot_method,
-    aws_api_gateway_method.dappbot_private_list_method,
-  ]
-
-  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
-  stage_name  = "v1"
-}
-
-# ---------------------------------------------------------------------------------------------------------------------
-# API GATEWAY PRIVATE: DAPPBOT API
-# ---------------------------------------------------------------------------------------------------------------------
-
-resource "aws_api_gateway_resource" "dappbot_private_resource" {
-  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
-  parent_id   = aws_api_gateway_rest_api.dapp_api.root_resource_id
-  path_part   = "private"
-}
-
-resource "aws_api_gateway_resource" "dappbot_private_proxy_resource" {
-  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
-  parent_id   = aws_api_gateway_resource.dappbot_private_resource.id
-  path_part   = "{proxy+}"
-}
-
-resource "aws_api_gateway_method" "dappbot_method" {
-  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
-  resource_id = aws_api_gateway_resource.dappbot_private_proxy_resource.id
-  http_method = "ANY"
-
-  authorization = "COGNITO_USER_POOLS"
-  authorizer_id = aws_api_gateway_authorizer.api_auth.id
-
-  request_parameters = {
-    "method.request.path.proxy" = true
-  }
-}
-
-resource "aws_api_gateway_integration" "dappbot_integration" {
-  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
-  resource_id = aws_api_gateway_resource.dappbot_private_proxy_resource.id
-  http_method = aws_api_gateway_method.dappbot_method.http_method
-
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = local.dappbot_lambda_uri
-
-  request_parameters = {
-    "integration.request.path.proxy" = "method.request.path.proxy"
-  }
-}
-
-resource "aws_api_gateway_method" "dappbot_private_list_method" {
-  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
-  resource_id = aws_api_gateway_resource.dappbot_private_resource.id
-  http_method = "GET"
-
-  authorization = "COGNITO_USER_POOLS"
-  authorizer_id = aws_api_gateway_authorizer.api_auth.id
-}
-
-resource "aws_api_gateway_integration" "dappbot_private_list_integration" {
-  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
-  resource_id = aws_api_gateway_resource.dappbot_private_resource.id
-  http_method = aws_api_gateway_method.dappbot_private_list_method.http_method
-
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = local.dappbot_lambda_uri
-}
-
-resource "aws_api_gateway_authorizer" "api_auth" {
-  name          = "dappbot-auth-${var.subdomain}"
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  provider_arns = [aws_cognito_user_pool.registered_users.arn]
-
-  identity_source = "method.request.header.Authorization"
-  type            = "COGNITO_USER_POOLS"
-}
-
-# ---------------------------------------------------------------------------------------------------------------------
-# API GATEWAY PUBLIC: DAPPHUB VIEW
-# ---------------------------------------------------------------------------------------------------------------------
-resource "aws_api_gateway_resource" "dapphub_public_resource" {
-  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
-  parent_id   = aws_api_gateway_rest_api.dapp_api.root_resource_id
-  path_part   = "public"
-}
-
-resource "aws_api_gateway_resource" "dapphub_public_proxy_resource" {
-  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
-  parent_id   = aws_api_gateway_resource.dapphub_public_resource.id
-  path_part   = "{proxy+}"
-}
-
-resource "aws_api_gateway_method" "dapphub_method" {
-  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
-  resource_id = aws_api_gateway_resource.dapphub_public_proxy_resource.id
-  http_method = "ANY"
-
-  authorization = "NONE"
-}
-
-resource "aws_api_gateway_integration" "dapphub_integration" {
-  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
-  resource_id = aws_api_gateway_resource.dapphub_public_proxy_resource.id
-  http_method = aws_api_gateway_method.dapphub_method.http_method
-
-  integration_http_method = "POST"
-  type                    = "AWS_PROXY"
-  uri                     = local.dapphub_lambda_uri
-}
-
-# ---------------------------------------------------------------------------------------------------------------------
-# API GATEWAY RESPONSES
-# ---------------------------------------------------------------------------------------------------------------------
-resource "aws_api_gateway_gateway_response" "access_denied" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "ACCESS_DENIED"
-  status_code   = "403"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "api_configuration_error" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "API_CONFIGURATION_ERROR"
-  status_code   = "500"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "authorizer_configuration_error" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "AUTHORIZER_CONFIGURATION_ERROR"
-  status_code   = "500"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "authorizer_failure" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "AUTHORIZER_FAILURE"
-  status_code   = "500"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "bad_request_parameters" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "BAD_REQUEST_PARAMETERS"
-  status_code   = "400"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "bad_request_body" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "BAD_REQUEST_BODY"
-  status_code   = "400"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "default_4xx" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "DEFAULT_4XX"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "default_5xx" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "DEFAULT_5XX"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "expired_token" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "EXPIRED_TOKEN"
-  status_code   = "403"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "integration_failure" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "INTEGRATION_FAILURE"
-  status_code   = "504"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "integration_timeout" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "INTEGRATION_TIMEOUT"
-  status_code   = "504"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "invalid_api_key" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "INVALID_API_KEY"
-  status_code   = "403"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "invalid_signature" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "INVALID_SIGNATURE"
-  status_code   = "403"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "missing_authentication_token" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "MISSING_AUTHENTICATION_TOKEN"
-  status_code   = "403"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "quota_exceeded" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "QUOTA_EXCEEDED"
-  status_code   = "429"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "request_too_large" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "REQUEST_TOO_LARGE"
-  status_code   = "413"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "resource_not_found" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "RESOURCE_NOT_FOUND"
-  status_code   = "404"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "throttled" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "THROTTLED"
-  status_code   = "429"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "unauthorized" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "UNAUTHORIZED"
-  status_code   = "401"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "unsupported_media_type" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "UNSUPPORTED_MEDIA_TYPE"
-  status_code   = "415"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-resource "aws_api_gateway_gateway_response" "waf_filtered" {
-  rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  response_type = "WAF_FILTERED"
-  status_code   = "403"
-
-  response_parameters = {
-    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-    "gatewayresponse.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
-    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
-  }
-
-  response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-}
-
-# ---------------------------------------------------------------------------------------------------------------------
-# CUSTOM DNS NAME
-# ---------------------------------------------------------------------------------------------------------------------
-resource "aws_api_gateway_domain_name" "domain" {
-  certificate_arn = local.api_cert_arn
-  domain_name     = local.api_domain
-
-  depends_on = [aws_acm_certificate_validation.api_cert]
-}
-
-resource "aws_api_gateway_base_path_mapping" "base_path_mapping" {
-  api_id = aws_api_gateway_rest_api.dapp_api.id
-
-  domain_name = aws_api_gateway_domain_name.domain.domain_name
-}
-
-resource "aws_route53_record" "example" {
-  name    = aws_api_gateway_domain_name.domain.domain_name
-  type    = "A"
-  zone_id = data.aws_route53_zone.hosted_zone.zone_id
-
-  alias {
-    evaluate_target_health = true
-    name                   = aws_api_gateway_domain_name.domain.cloudfront_domain_name
-    zone_id                = aws_api_gateway_domain_name.domain.cloudfront_zone_id
-  }
-}
-
-# ---------------------------------------------------------------------------------------------------------------------
 # DYNAMODB TABLES
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_dynamodb_table" "dapp_table" {
@@ -1047,6 +662,19 @@ resource "aws_dynamodb_table" "dapp_table" {
 
   attribute {
     name = "OwnerEmail"
+    type = "S"
+  }
+
+  tags = local.default_tags
+}
+
+resource "aws_dynamodb_table" "lapsed_users_table" {
+  name         = "dappbot-lapsed-users-${var.subdomain}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "UserEmail"
+
+  attribute {
+    name = "UserEmail"
     type = "S"
   }
 
@@ -1308,15 +936,17 @@ resource "aws_cloudwatch_event_target" "sns" {
   target_id = "SendToSNS"
   arn       = aws_sns_topic.cleanup_event.arn
 
-  input = "{\"command\":\"cleanup\"}"
+  input = "{\"event\":\"CLEANUP\"}"
 }
 
+# Subscriptions
 resource "aws_sns_topic_subscription" "cleanup_lambda" {
   topic_arn = aws_sns_topic.cleanup_event.arn
   protocol  = "lambda"
   endpoint  = aws_lambda_function.dappbot_event_listener_lambda.arn
 }
 
+# Permissions
 resource "aws_lambda_permission" "sns_invoke_cleanup_lambda" {
   statement_id  = "CleanupAllowExecutionFromSns"
   action        = "lambda:InvokeFunction"
@@ -1326,21 +956,47 @@ resource "aws_lambda_permission" "sns_invoke_cleanup_lambda" {
   source_arn = aws_sns_topic.cleanup_event.arn
 }
 
-resource "aws_sns_topic_policy" "default" {
+resource "aws_sns_topic_policy" "cloudwatch_events_publish_cleanup" {
   arn    = aws_sns_topic.cleanup_event.arn
-  policy = data.aws_iam_policy_document.cleanup_topic_policy.json
+  policy = data.aws_iam_policy_document.cloudwatch_events_publish_cleanup.json
 }
 
-data "aws_iam_policy_document" "cleanup_topic_policy" {
+data "aws_iam_policy_document" "cloudwatch_events_publish_cleanup" {
   statement {
+    sid = "1"
+
     effect  = "Allow"
-    actions = ["SNS:Publish"]
+
+    actions   = ["sns:Publish"]
+    resources = [aws_sns_topic.cleanup_event.arn]
 
     principals {
       type        = "Service"
       identifiers = ["events.amazonaws.com"]
     }
-
-    resources = [aws_sns_topic.cleanup_event.arn]
   }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# PAYMENT EVENTS
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_sns_topic" "payment_events" {
+  name = "dappbot-payment-events-${var.subdomain}"
+}
+
+# Subscriptions
+resource "aws_sns_topic_subscription" "payment_events_lambda" {
+  topic_arn = aws_sns_topic.payment_events.arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.dappbot_event_listener_lambda.arn
+}
+
+# Permissions
+resource "aws_lambda_permission" "sns_payment_events_invoke_event_listener_lambda" {
+  statement_id  = "PaymentEventsAllowExecutionFromSns"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.dappbot_event_listener_lambda.function_name
+  principal     = "sns.amazonaws.com"
+
+  source_arn = aws_sns_topic.payment_events.arn
 }
