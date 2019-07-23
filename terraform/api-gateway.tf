@@ -24,7 +24,19 @@ resource "aws_api_gateway_deployment" "dapp_api_deploy_v1" {
     aws_api_gateway_method.dappbot_private_cors,
 
     aws_api_gateway_integration.dappbot_auth_proxy_any,
-    aws_api_gateway_method.dappbot_auth_proxy_any
+    aws_api_gateway_method.dappbot_auth_proxy_any,
+
+    aws_api_gateway_integration.payment_stripe_any,
+    aws_api_gateway_method.payment_stripe_any,
+
+    aws_api_gateway_integration.payment_stripe_post,
+    aws_api_gateway_method.payment_stripe_post,
+
+    aws_api_gateway_integration.payment_stripe_cors,
+    aws_api_gateway_method.payment_stripe_cors,
+
+    aws_api_gateway_integration.payment_stripe_webhook_any,
+    aws_api_gateway_method.payment_stripe_webhook_any
   ]
 
   rest_api_id = aws_api_gateway_rest_api.dapp_api.id
@@ -358,7 +370,7 @@ resource "aws_api_gateway_resource" "payment" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# API GATEWAY: `/payment/stripe/{proxy}` STRIPE PAYMENT GATEWAY API
+# API GATEWAY: `/payment/stripe/ POST` STRIPE SIGNUP GATEWAY API
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_api_gateway_resource" "payment_stripe" {
   rest_api_id = aws_api_gateway_rest_api.dapp_api.id
@@ -366,38 +378,170 @@ resource "aws_api_gateway_resource" "payment_stripe" {
   path_part   = "stripe"
 }
 
-# TODO: Split into REST-like API
-resource "aws_api_gateway_resource" "payment_stripe_proxy" {
+resource "aws_api_gateway_method" "payment_stripe_post" {
   rest_api_id = aws_api_gateway_rest_api.dapp_api.id
-  parent_id   = aws_api_gateway_resource.payment_stripe.id
-  path_part   = "{proxy+}"
+  resource_id = aws_api_gateway_resource.payment_stripe.id
+  http_method = "POST"
+
+  authorization = "NONE"
 }
 
-resource "aws_api_gateway_method" "payment_stripe_proxy_any" {
+resource "aws_api_gateway_integration" "payment_stripe_post" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.payment_stripe.id
+  http_method = aws_api_gateway_method.payment_stripe_post.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = local.stripe_signup_gateway_lambda_uri
+
+  depends_on = [
+    aws_api_gateway_method.payment_stripe_post
+  ]
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# API GATEWAY: `/payment/stripe/ ANY` STRIPE MANAGEMENT GATEWAY API
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_api_gateway_method" "payment_stripe_any" {
   rest_api_id   = aws_api_gateway_rest_api.dapp_api.id
-  resource_id   = aws_api_gateway_resource.payment_stripe_proxy.id
+  resource_id   = aws_api_gateway_resource.payment_stripe.id
   http_method   = "ANY"
-  authorization = "NONE"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.api_auth.id
 
   request_parameters = {
-    "method.request.path.proxy"              = true
     "method.request.header.Stripe-Signature" = true
   }
 }
 
-resource "aws_api_gateway_integration" "payment_stripe_proxy_any" {
+resource "aws_api_gateway_method_response" "payment_stripe_any" {
   rest_api_id = aws_api_gateway_rest_api.dapp_api.id
-  resource_id = aws_api_gateway_resource.payment_stripe_proxy.id
-  http_method = aws_api_gateway_method.payment_stripe_proxy_any.http_method
+  resource_id = aws_api_gateway_resource.payment_stripe.id
+  http_method = aws_api_gateway_method.payment_stripe_any.http_method
+  status_code = "200"
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+
+  depends_on = [aws_api_gateway_method.payment_stripe_any]
+}
+
+resource "aws_api_gateway_integration" "payment_stripe_any" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.payment_stripe.id
+  http_method = aws_api_gateway_method.payment_stripe_any.http_method
 
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = local.payment_gateway_stripe_lambda_uri
+  uri                     = local.stripe_management_gateway_lambda_uri
 
   request_parameters = {
-    "integration.request.path.proxy"              = "method.request.path.proxy"
     "integration.request.header.Stripe-Signature" = "method.request.header.Stripe-Signature"
   }
+
+  depends_on = [
+    aws_api_gateway_method.payment_stripe_any,
+    aws_lambda_function.stripe_management_gateway_lambda
+  ]
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# API GATEWAY: `/payment/stripe/ OPTIONS` CORS PREFLIGHT HANDLING
+# ---------------------------------------------------------------------------------------------------------------------
+
+resource "aws_api_gateway_method" "payment_stripe_cors" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.payment_stripe.id
+  http_method = "OPTIONS"
+
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_method_response" "payment_stripe_cors" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.payment_stripe.id
+  http_method = aws_api_gateway_method.payment_stripe_cors.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin" = true
+  }
+
+  response_models = {
+    "application/json" = "Empty"
+  }
+
+  depends_on = [
+    aws_api_gateway_method.payment_stripe_cors
+  ]
+}
+
+resource "aws_api_gateway_integration" "payment_stripe_cors" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.payment_stripe.id
+  http_method = aws_api_gateway_method.payment_stripe_cors.http_method
+
+  type = "MOCK"
+
+  request_templates = { 
+    "application/json" = "{ \"statusCode\": 200   }"
+  }
+
+  depends_on = [
+    aws_api_gateway_method.payment_stripe_cors
+  ]
+}
+
+resource "aws_api_gateway_integration_response" "payment_stripe_cors" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.payment_stripe.id
+  http_method = aws_api_gateway_method.payment_stripe_cors.http_method
+  status_code = aws_api_gateway_method_response.payment_stripe_cors.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+    "method.response.header.Access-Control-Allow-Methods" = "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+    "method.response.header.Access-Control-Allow-Origin" = "'*'"
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.payment_stripe_cors,
+    aws_api_gateway_method.payment_stripe_cors
+  ]
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# API GATEWAY: `ANY /payment/stripe/webhook` STRIPE WEBHOOK GATEWAY API
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_api_gateway_resource" "payment_stripe_webhook" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  parent_id   = aws_api_gateway_resource.payment_stripe.id
+  path_part   = "webhook"
+}
+
+resource "aws_api_gateway_method" "payment_stripe_webhook_any" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.payment_stripe_webhook.id
+  http_method = "ANY"
+
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "payment_stripe_webhook_any" {
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  resource_id = aws_api_gateway_resource.payment_stripe_webhook.id
+  http_method = aws_api_gateway_method.payment_stripe_webhook_any.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = local.stripe_webhook_gateway_lambda_uri
+
+  depends_on = [
+    aws_api_gateway_method.payment_stripe_webhook_any
+  ]
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -801,11 +945,33 @@ resource "aws_lambda_permission" "api_gateway_invoke_dappbot_auth_lambda" {
   source_arn = local.api_gateway_source_arn
 }
 
-# Stripe Payment Gateway API
-resource "aws_lambda_permission" "api_gateway_invoke_stripe_payment_gateway_lambda" {
+# Stripe Signup Gateway API
+resource "aws_lambda_permission" "api_gateway_invoke_stripe_signup_gateway_lambda" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.stripe_payment_gateway_lambda.function_name
+  function_name = aws_lambda_function.stripe_signup_gateway_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
+  source_arn = local.api_gateway_source_arn
+}
+
+# Stripe Management Gateway API
+resource "aws_lambda_permission" "api_gateway_invoke_stripe_management_gateway_lambda" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.stripe_management_gateway_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html
+  source_arn = local.api_gateway_source_arn
+}
+
+# Stripe Webhook Gateway API
+resource "aws_lambda_permission" "api_gateway_invoke_stripe_webhook_gateway_lambda" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.stripe_webhook_gateway_lambda.function_name
   principal     = "apigateway.amazonaws.com"
 
   # More: http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-control-access-using-iam-policies-to-invoke-api.html

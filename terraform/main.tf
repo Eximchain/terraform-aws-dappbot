@@ -50,7 +50,9 @@ locals {
   dappbot_lambda_uri                = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_api_lambda.arn}/invocations"
   dappbot_auth_lambda_uri           = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_auth_api_lambda.arn}/invocations"
   dapphub_lambda_uri                = "${local.base_lambda_uri}/${aws_lambda_function.dapphub_view_lambda.arn}/invocations"
-  payment_gateway_stripe_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.stripe_payment_gateway_lambda.arn}/invocations"
+  stripe_management_gateway_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.stripe_management_gateway_lambda.arn}/invocations"
+  stripe_webhook_gateway_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.stripe_webhook_gateway_lambda.arn}/invocations"
+  stripe_signup_gateway_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.stripe_signup_gateway_lambda.arn}/invocations"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -355,7 +357,7 @@ resource "aws_lambda_function" "dappbot_event_listener_lambda" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# PAYMENT GATEWAY STRIPE LAMBDA FUNCTION
+# PAYMENT STRIPE LAMBDA FUNCTION SHARED WAIT
 # ---------------------------------------------------------------------------------------------------------------------
 resource "null_resource" "payment_gateway_stripe_wait" {
   provisioner "local-exec" {
@@ -364,16 +366,75 @@ resource "null_resource" "payment_gateway_stripe_wait" {
   depends_on = [aws_iam_role.stripe_payment_gateway_lambda_iam]
 }
 
-resource "aws_lambda_function" "stripe_payment_gateway_lambda" {
+# ---------------------------------------------------------------------------------------------------------------------
+# PAYMENT STRIPE SIGNUP LAMBDA FUNCTION
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_lambda_function" "stripe_signup_gateway_lambda" {
   filename         = "payment-gateway-stripe-lambda.zip"
-  function_name    = "stripe-payment-gateway-lambda-${var.subdomain}"
+  function_name    = "stripe-signup-gateway-lambda-${var.subdomain}"
   role             = aws_iam_role.stripe_payment_gateway_lambda_iam.arn
-  handler          = "index.handler"
+  handler          = "index.signupHandler"
   source_code_hash = filebase64sha256("payment-gateway-stripe-lambda.zip")
   runtime          = "nodejs8.10"
   timeout          = 900
 
-  # TODO: Env vars
+  environment {
+    variables = {
+      COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
+      STRIPE_API_KEY    = var.stripe_api_key
+    }
+  }
+
+  depends_on = [null_resource.payment_gateway_stripe_wait]
+
+  tags = local.default_tags
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# PAYMENT STRIPE MANAGEMENT LAMBDA FUNCTION
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_lambda_function" "stripe_management_gateway_lambda" {
+  filename         = "payment-gateway-stripe-lambda.zip"
+  function_name    = "stripe-management-gateway-lambda-${var.subdomain}"
+  role             = aws_iam_role.stripe_payment_gateway_lambda_iam.arn
+  handler          = "index.managementHandler"
+  source_code_hash = filebase64sha256("payment-gateway-stripe-lambda.zip")
+  runtime          = "nodejs8.10"
+  timeout          = 900
+
+  environment {
+    variables = {
+      DAPP_TABLE        = aws_dynamodb_table.dapp_table.id
+      COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
+      SNS_TOPIC_ARN     = aws_sns_topic.payment_events.arn
+      STRIPE_API_KEY    = var.stripe_api_key
+    }
+  }
+
+  depends_on = [null_resource.payment_gateway_stripe_wait]
+
+  tags = local.default_tags
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# PAYMENT STRIPE WEBHOOK LAMBDA FUNCTION
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_lambda_function" "stripe_webhook_gateway_lambda" {
+  filename         = "payment-gateway-stripe-lambda.zip"
+  function_name    = "stripe-webhook-gateway-lambda-${var.subdomain}"
+  role             = aws_iam_role.stripe_payment_gateway_lambda_iam.arn
+  handler          = "index.webhookHandler"
+  source_code_hash = filebase64sha256("payment-gateway-stripe-lambda.zip")
+  runtime          = "nodejs8.10"
+  timeout          = 900
+
+  environment {
+    variables = {
+      SNS_TOPIC_ARN         = aws_sns_topic.payment_events.arn
+      STRIPE_API_KEY        = var.stripe_api_key
+      STRIPE_WEBHOOK_SECRET = var.stripe_webhook_secret
+    }
+  }
 
   depends_on = [null_resource.payment_gateway_stripe_wait]
 

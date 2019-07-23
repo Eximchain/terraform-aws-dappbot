@@ -297,8 +297,9 @@ data "aws_iam_policy_document" "cognito_allow_auth" {
     effect = "Allow"
 
     actions = [
-      "cognito-idp:AdminInitiateAuth",
       "cognito-idp:AdminConfirmSignUp",
+      "cognito-idp:AdminGetUser",
+      "cognito-idp:AdminInitiateAuth",
       "cognito-idp:AdminResetUserPassword",
       "cognito-idp:AdminRespondToAuthChallenge",
       "cognito-idp:AssociateSoftwareToken",
