@@ -34,12 +34,12 @@ variable "root_domain" {
 
 variable "subdomain" {
   description = "subdomain on which to host the API. The API DNS will be {subdomain}.{root_domain}"
-  default     = "api-test"
+  default     = "dappbot-api"
 }
 
 variable "dapphub_subdomain" {
   description = "subdomain on which to host the Dapphub. The Dapphub DNS will be {dapphub_subdomain}.{root_domain}"
-  default     = "hub-test"
+  default     = "dapphub"
 }
 
 variable "dapphub_branch" {
@@ -49,7 +49,7 @@ variable "dapphub_branch" {
 
 variable "dappbot_manager_subdomain" {
   description = "subdomain on which to host the DappBot Manager. The DappBot Manager DNS will be {dappbot_manager_subdomain}.{root_domain}"
-  default     = "dappbot-manager-test"
+  default     = "dappbot-manager"
 }
 
 variable "dappbot_manager_branch" {
