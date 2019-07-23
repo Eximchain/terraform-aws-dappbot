@@ -116,6 +116,7 @@ resource "aws_lambda_function" "dappbot_api_lambda" {
       DDB_TABLE         = aws_dynamodb_table.dapp_table.id
       DNS_ROOT          = local.created_dns_root
       SQS_QUEUE         = aws_sqs_queue.dappbot.id
+      DAPPHUB_DNS       = local.dapphub_dns
     }
   }
 
