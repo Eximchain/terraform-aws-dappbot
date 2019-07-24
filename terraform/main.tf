@@ -40,7 +40,7 @@ locals {
     0,
   )
 
-  dapphub_dns         = var.dappbot_manager_subdomain == "" ? var.root_domain : "${var.dapphub_subdomain}.${var.root_domain}"
+  dapphub_dns         = var.dapphub_subdomain == "" ? var.root_domain : "${var.dapphub_subdomain}.${var.root_domain}"
   dappbot_manager_dns = var.dappbot_manager_subdomain == "" ? var.root_domain : "${var.dappbot_manager_subdomain}.${var.root_domain}"
 
   image_url              = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com/${var.codebuild_image}"
