@@ -908,7 +908,7 @@ module "dappbot_manager" {
   force_destroy_buckets = true
 
   env = {
-    REACT_APP_DAPPSMITH_ENDPOINT         = "https://${local.api_domain}"
+    REACT_APP_DAPPBOT_API_ENDPOINT       = "https://${local.api_domain}"
     REACT_APP_AWS_REGION                 = var.aws_region
     REACT_APP_USER_POOL_ID               = aws_cognito_user_pool.registered_users.id
     REACT_APP_STRIPE_PUBLISHABLE_API_KEY = "TODO: Fill in"
