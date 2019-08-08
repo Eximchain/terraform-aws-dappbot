@@ -831,7 +831,7 @@ resource "aws_cognito_user_pool_client" "api_client" {
 
   supported_identity_providers = ["COGNITO"]
 
-  read_attributes  = ["email", "custom:num_dapps", "custom:standard_limit", "custom:professional_limit", "custom:enterprise_limit"]
+  read_attributes  = ["email", "custom:num_dapps", "custom:standard_limit", "custom:professional_limit", "custom:enterprise_limit", "custom:payment_provider", "custom:payment_status"]
   write_attributes = ["email"]
 
   # Allows us to skip the challenge flow for script-based testing
