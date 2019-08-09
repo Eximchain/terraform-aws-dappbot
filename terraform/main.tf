@@ -433,6 +433,8 @@ resource "aws_lambda_function" "stripe_webhook_gateway_lambda" {
       SNS_TOPIC_ARN         = aws_sns_topic.payment_events.arn
       STRIPE_API_KEY        = var.stripe_api_key
       STRIPE_WEBHOOK_SECRET = var.stripe_webhook_secret
+      SENDGRID_API_KEY      = var.sendgrid_key
+      MANAGER_SPA_DNS       = local.dappbot_manager_dns
     }
   }
 
