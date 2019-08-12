@@ -105,3 +105,8 @@ variable "stripe_webhook_secret" {
   description = "Stripe secret used to decrypt webhook payloads.  One per webhook."
   default     = ""
 }
+
+variable "stripe_public_key" {
+  description = "Publishable secret key so clients can tokenize card information.  Must be set for client-side Stripe interactions to succeed."
+  default     = ""
+}
