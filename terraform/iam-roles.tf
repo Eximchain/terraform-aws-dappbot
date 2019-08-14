@@ -270,6 +270,11 @@ resource "aws_iam_role_policy_attachment" "stripe_payment_gateway_cognito" {
   policy_arn = aws_iam_policy.cognito_manage_users.arn
 }
 
+resource "aws_iam_role_policy_attachment" "stripe_payment_gateway_cognito_attributes" {
+  role       = aws_iam_role.stripe_payment_gateway_lambda_iam.id
+  policy_arn = aws_iam_policy.cognito_update_user_attributes.arn
+}
+
 # SNS
 resource "aws_iam_role_policy_attachment" "stripe_payment_gateway_sns" {
   role       = aws_iam_role.stripe_payment_gateway_lambda_iam.id
