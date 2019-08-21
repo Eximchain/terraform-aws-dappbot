@@ -380,8 +380,9 @@ resource "aws_lambda_function" "stripe_signup_gateway_lambda" {
 
   environment {
     variables = {
-      COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
-      STRIPE_API_KEY    = var.stripe_api_key
+      COGNITO_USER_POOL       = aws_cognito_user_pool.registered_users.id
+      STRIPE_API_KEY          = var.stripe_api_key
+      EXIMCHAIN_ACCOUNTS_ONLY = var.eximchain_accounts_only
     }
   }
 

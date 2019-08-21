@@ -110,3 +110,8 @@ variable "stripe_public_key" {
   description = "Publishable secret key so clients can tokenize card information.  Must be set for client-side Stripe interactions to succeed."
   default     = ""
 }
+
+variable "eximchain_accounts_only" {
+  description = "If true, only `@eximchain.com` emails will be permitted to sign up for accounts."
+  default     = true
+}
