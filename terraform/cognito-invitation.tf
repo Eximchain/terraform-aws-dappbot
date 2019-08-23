@@ -1,7 +1,8 @@
 locals {
   build_path = "${path.module}/cognito-messages"
   email_path = "${local.build_path}/email.html"
-  invitation_sms = "Welcome to DappBot! Sign in at ${local.dappbot_manager_dns}/login with {username} and {####}"
+  login_link = "${local.dappbot_manager_dns}/login"
+  invitation_sms = "Welcome to DappBot! Sign in at ${local.login_link} with {username} and {####}"
   invitation_email_subject = "Welcome to your FREE Trial: DappBot Trial Password"
   invitation_email_args = {
     title = "DappBot Trial | Temporary Password"
@@ -13,7 +14,7 @@ locals {
     code = "{####}"
     codeName = "temporary password"
     bottomParagraphs = [
-      "You can now <a href=\"${local.dappbot_manager_dns}/login\" style=\"box-sizing: border-box; color: #3869D4; font-family: 'Helvetica Neue', Helvetica, sans-serif\">login</a> now with your username, {username}, and the password above.  You'll be prompted to set a different password.  If you're having any trouble getting your contract and dapp deployed, try looking at our <a href=\"https://dappbot.drift.help/category/getting-started/\" style=\"box-sizing: border-box; color: #3869D4; font-family: 'Helvetica Neue', Helvetica, sans-serif\">DappBot help articles</a>.",
+      "You can now <a href=\"${local.login_link}\" style=\"box-sizing: border-box; color: #3869D4; font-family: 'Helvetica Neue', Helvetica, sans-serif\">login</a> with your username, {username}, and the password above.  You'll be prompted to set a different password.  If you're having any trouble getting your contract and dapp deployed, try looking at our <a href=\"https://dappbot.drift.help/category/getting-started/\" style=\"box-sizing: border-box; color: #3869D4; font-family: 'Helvetica Neue', Helvetica, sans-serif\">DappBot help articles</a>.",
       "We will email you a survey before the end of your trial, and if you fill it out, the trial will be extended!  Especially during your trial period, please reach out to us at support@eximchain.com if you require any support or assistance with Dappbot.",
     ]
   }
