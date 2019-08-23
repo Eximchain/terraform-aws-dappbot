@@ -700,6 +700,12 @@ resource "aws_cognito_user_pool" "registered_users" {
   admin_create_user_config {
     allow_admin_create_user_only = true
     unused_account_validity_days = 7
+
+    invite_message_template {
+      email_subject = local.invitation_email_subject
+      email_message = local.invitation_email_html
+      sms_message   = local.invitation_sms
+    }
   }
 
   password_policy {
