@@ -88,6 +88,20 @@ resource "aws_s3_bucket" "dappseed_bucket" {
   tags = local.default_tags
 }
 
+resource "aws_s3_bucket" "lambda_deployment_packages" {
+  bucket        = "dappbot-lambda-packages-${var.subdomain}"
+  acl           = "private"
+  force_destroy = true
+
+  tags = local.default_tags
+}
+
+resource "aws_s3_bucket_object" "default_function" {
+  bucket = aws_s3_bucket.lambda_deployment_packages.bucket
+  key    = "default-lambda.zip"
+  source = "${path.module}/default-lambda.zip"
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # DAPPBOT API LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
@@ -100,12 +114,35 @@ resource "null_resource" "dappbot_private_api_wait" {
   depends_on = [aws_iam_role.dappbot_private_api_iam]
 }
 
+module "dappbot_api_lambda_pipeline" {
+  source = "git@github.com:Eximchain/terraform-aws-lambda-cd-pipeline.git"
+
+  id = "api-${var.subdomain}"
+
+  github_lambda_repo    = "dappbot-api-lambda"
+  github_lambda_branch  = var.dappbot_api_lambda_branch_override != "" ? var.dappbot_api_lambda_branch_override : var.lambda_default_branch
+  build_command         = "npm install && npm run build"
+
+  deployment_package_filename    = "dappbot-api-lambda.zip"
+  deployment_package_bucket_name = aws_s3_bucket.lambda_deployment_packages.bucket
+
+  deployment_target_lambdas = [
+    aws_lambda_function.dappbot_api_lambda.function_name,
+    aws_lambda_function.dapphub_view_lambda.function_name,
+    aws_lambda_function.dappbot_auth_api_lambda.function_name
+  ]
+
+  aws_region            = var.aws_region
+  force_destroy_buckets = true
+}
+
 resource "aws_lambda_function" "dappbot_api_lambda" {
-  filename         = "dappbot-api-lambda.zip"
+  s3_bucket        = aws_s3_bucket.lambda_deployment_packages.bucket
+  s3_key           = aws_s3_bucket_object.default_function.key
   function_name    = "dappbot-api-lambda-${var.subdomain}"
   role             = aws_iam_role.dappbot_private_api_iam.arn
   handler          = "index.privateHandler"
-  source_code_hash = filebase64sha256("dappbot-api-lambda.zip")
+  source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
   runtime          = "nodejs8.10"
   timeout          = 10
 
@@ -123,6 +160,13 @@ resource "aws_lambda_function" "dappbot_api_lambda" {
   depends_on = [null_resource.dappbot_private_api_wait]
 
   tags = local.default_tags
+
+  lifecycle {
+    ignore_changes = [
+      "source_code_hash",
+      "last_modified"
+    ]
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -138,11 +182,12 @@ resource "null_resource" "dappbot_public_api_wait" {
 }
 
 resource "aws_lambda_function" "dapphub_view_lambda" {
-  filename         = "dappbot-api-lambda.zip"
+  s3_bucket        = aws_s3_bucket.lambda_deployment_packages.bucket
+  s3_key           = aws_s3_bucket_object.default_function.key
   function_name    = "dapphub-view-lambda-${var.subdomain}"
   role             = aws_iam_role.dappbot_public_api_iam.arn
   handler          = "index.publicHandler"
-  source_code_hash = filebase64sha256("dappbot-api-lambda.zip")
+  source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
   runtime          = "nodejs8.10"
   timeout          = 5
 
@@ -155,6 +200,13 @@ resource "aws_lambda_function" "dapphub_view_lambda" {
   depends_on = [null_resource.dappbot_public_api_wait]
 
   tags = local.default_tags
+
+  lifecycle {
+    ignore_changes = [
+      "source_code_hash",
+      "last_modified"
+    ]
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -169,11 +221,12 @@ resource "null_resource" "dappbot_auth_api_wait" {
 }
 
 resource "aws_lambda_function" "dappbot_auth_api_lambda" {
-  filename         = "dappbot-api-lambda.zip"
+  s3_bucket        = aws_s3_bucket.lambda_deployment_packages.bucket
+  s3_key           = aws_s3_bucket_object.default_function.key
   function_name    = "dappbot-auth-lambda-${var.subdomain}"
   role             = aws_iam_role.dappbot_auth_api_iam.arn
   handler          = "index.authHandler"
-  source_code_hash = filebase64sha256("dappbot-api-lambda.zip")
+  source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
   runtime          = "nodejs8.10"
   timeout          = 5
 
@@ -187,6 +240,13 @@ resource "aws_lambda_function" "dappbot_auth_api_lambda" {
   depends_on = [null_resource.dappbot_auth_api_wait]
 
   tags = local.default_tags
+
+  lifecycle {
+    ignore_changes = [
+      "source_code_hash",
+      "last_modified"
+    ]
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -201,13 +261,34 @@ resource "null_resource" "dappbot_manager_wait" {
   depends_on = [aws_iam_role.dappbot_manager_iam]
 }
 
-resource "aws_lambda_function" "dappbot_manager_lambda" {
-  filename      = "dappbot-manager-lambda.zip"
-  function_name = "dappbot-manager-${var.subdomain}"
+module "dappbot_manager_lambda_pipeline" {
+  source = "git@github.com:Eximchain/terraform-aws-lambda-cd-pipeline.git"
 
+  id = "manager-${var.subdomain}"
+
+  github_lambda_repo    = "dappbot-manager-lambda"
+  github_lambda_branch  = var.dappbot_manager_lambda_branch_override != "" ? var.dappbot_manager_lambda_branch_override : var.lambda_default_branch
+  build_command         = "npm install && npm run build"
+
+  deployment_package_filename    = "dappbot-manager-lambda.zip"
+  deployment_package_bucket_name = aws_s3_bucket.lambda_deployment_packages.bucket
+
+  deployment_target_lambdas = [
+    aws_lambda_function.dappbot_manager_lambda.function_name,
+    aws_lambda_function.dappbot_manager_deadletter_lambda.function_name
+  ]
+
+  aws_region            = var.aws_region
+  force_destroy_buckets = true
+}
+
+resource "aws_lambda_function" "dappbot_manager_lambda" {
+  s3_bucket        = aws_s3_bucket.lambda_deployment_packages.bucket
+  s3_key           = aws_s3_bucket_object.default_function.key
+  function_name    = "dappbot-manager-${var.subdomain}"
   role             = aws_iam_role.dappbot_manager_iam.arn
   handler          = "index.handler"
-  source_code_hash = filebase64sha256("dappbot-manager-lambda.zip")
+  source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
   runtime          = "nodejs8.10"
   timeout          = 60
 
@@ -233,6 +314,13 @@ resource "aws_lambda_function" "dappbot_manager_lambda" {
   depends_on = [null_resource.dappbot_manager_wait]
 
   tags = local.default_tags
+
+  lifecycle {
+    ignore_changes = [
+      "source_code_hash",
+      "last_modified"
+    ]
+  }
 }
 
 resource "aws_lambda_permission" "sqs_invoke_lambda" {
@@ -263,11 +351,12 @@ resource "null_resource" "dappbot_deadletter_wait" {
 }
 
 resource "aws_lambda_function" "dappbot_manager_deadletter_lambda" {
-  filename         = "dappbot-manager-lambda.zip"
+  s3_bucket        = aws_s3_bucket.lambda_deployment_packages.bucket
+  s3_key           = aws_s3_bucket_object.default_function.key
   function_name    = "dappbot-manager-deadletter-${var.subdomain}"
   role             = aws_iam_role.dappbot_deadletter_iam.arn
   handler          = "index.deadLetterHandler"
-  source_code_hash = filebase64sha256("dappbot-manager-lambda.zip")
+  source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
   runtime          = "nodejs8.10"
   timeout          = 30
 
@@ -293,6 +382,13 @@ resource "aws_lambda_function" "dappbot_manager_deadletter_lambda" {
   depends_on = [null_resource.dappbot_manager_wait]
 
   tags = local.default_tags
+
+  lifecycle {
+    ignore_changes = [
+      "source_code_hash",
+      "last_modified"
+    ]
+  }
 }
 
 resource "aws_lambda_permission" "sqs_invoke_deadletter_lambda" {
@@ -322,12 +418,31 @@ resource "null_resource" "dappbot_event_listener_wait" {
   depends_on = [aws_iam_role.dappbot_event_listener_iam]
 }
 
+module "dappbot_event_listener_lambda_pipeline" {
+  source = "git@github.com:Eximchain/terraform-aws-lambda-cd-pipeline.git"
+
+  id = "event-listener-${var.subdomain}"
+
+  github_lambda_repo    = "dappbot-event-listener-lambda"
+  github_lambda_branch  = var.dappbot_event_listener_lambda_branch_override != "" ? var.dappbot_event_listener_lambda_branch_override : var.lambda_default_branch
+  build_command         = "npm install && npm run build"
+
+  deployment_package_filename    = "dappbot-event-listener-lambda.zip"
+  deployment_package_bucket_name = aws_s3_bucket.lambda_deployment_packages.bucket
+
+  deployment_target_lambdas = [aws_lambda_function.dappbot_event_listener_lambda.function_name]
+
+  aws_region            = var.aws_region
+  force_destroy_buckets = true
+}
+
 resource "aws_lambda_function" "dappbot_event_listener_lambda" {
-  filename         = "dappbot-event-listener-lambda.zip"
+  s3_bucket        = aws_s3_bucket.lambda_deployment_packages.bucket
+  s3_key           = aws_s3_bucket_object.default_function.key
   function_name    = "dappbot-event-listener-lambda-${var.subdomain}"
   role             = aws_iam_role.dappbot_event_listener_iam.arn
   handler          = "index.handler"
-  source_code_hash = filebase64sha256("dappbot-event-listener-lambda.zip")
+  source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
   runtime          = "nodejs8.10"
   timeout          = 900
   memory_size      = 256
@@ -354,6 +469,13 @@ resource "aws_lambda_function" "dappbot_event_listener_lambda" {
   depends_on = [null_resource.dappbot_event_listener_wait]
 
   tags = local.default_tags
+
+  lifecycle {
+    ignore_changes = [
+      "source_code_hash",
+      "last_modified"
+    ]
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -366,15 +488,38 @@ resource "null_resource" "payment_gateway_stripe_wait" {
   depends_on = [aws_iam_role.stripe_payment_gateway_lambda_iam]
 }
 
+module "payment_gateway_stripe_lambda_pipeline" {
+  source = "git@github.com:Eximchain/terraform-aws-lambda-cd-pipeline.git"
+
+  id = "payment-gateway-stripe-${var.subdomain}"
+
+  github_lambda_repo    = "payment-gateway-stripe-lambda"
+  github_lambda_branch  = var.payment_gateway_stripe_lambda_branch_override != "" ? var.payment_gateway_stripe_lambda_branch_override : var.lambda_default_branch
+  build_command         = "npm install && npm run build"
+
+  deployment_package_filename    = "payment-gateway-stripe-lambda.zip"
+  deployment_package_bucket_name = aws_s3_bucket.lambda_deployment_packages.bucket
+
+  deployment_target_lambdas = [
+    aws_lambda_function.stripe_signup_gateway_lambda.function_name,
+    aws_lambda_function.stripe_management_gateway_lambda.function_name,
+    aws_lambda_function.stripe_webhook_gateway_lambda.function_name
+  ]
+
+  aws_region            = var.aws_region
+  force_destroy_buckets = true
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # PAYMENT STRIPE SIGNUP LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_lambda_function" "stripe_signup_gateway_lambda" {
-  filename         = "payment-gateway-stripe-lambda.zip"
+  s3_bucket        = aws_s3_bucket.lambda_deployment_packages.bucket
+  s3_key           = aws_s3_bucket_object.default_function.key
   function_name    = "stripe-signup-gateway-lambda-${var.subdomain}"
   role             = aws_iam_role.stripe_payment_gateway_lambda_iam.arn
   handler          = "index.signupHandler"
-  source_code_hash = filebase64sha256("payment-gateway-stripe-lambda.zip")
+  source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
   runtime          = "nodejs8.10"
   timeout          = 900
 
@@ -389,17 +534,25 @@ resource "aws_lambda_function" "stripe_signup_gateway_lambda" {
   depends_on = [null_resource.payment_gateway_stripe_wait]
 
   tags = local.default_tags
+
+  lifecycle {
+    ignore_changes = [
+      "source_code_hash",
+      "last_modified"
+    ]
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
 # PAYMENT STRIPE MANAGEMENT LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_lambda_function" "stripe_management_gateway_lambda" {
-  filename         = "payment-gateway-stripe-lambda.zip"
+  s3_bucket        = aws_s3_bucket.lambda_deployment_packages.bucket
+  s3_key           = aws_s3_bucket_object.default_function.key
   function_name    = "stripe-management-gateway-lambda-${var.subdomain}"
   role             = aws_iam_role.stripe_payment_gateway_lambda_iam.arn
   handler          = "index.managementHandler"
-  source_code_hash = filebase64sha256("payment-gateway-stripe-lambda.zip")
+  source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
   runtime          = "nodejs8.10"
   timeout          = 900
 
@@ -415,17 +568,25 @@ resource "aws_lambda_function" "stripe_management_gateway_lambda" {
   depends_on = [null_resource.payment_gateway_stripe_wait]
 
   tags = local.default_tags
+
+  lifecycle {
+    ignore_changes = [
+      "source_code_hash",
+      "last_modified"
+    ]
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
 # PAYMENT STRIPE WEBHOOK LAMBDA FUNCTION
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_lambda_function" "stripe_webhook_gateway_lambda" {
-  filename         = "payment-gateway-stripe-lambda.zip"
+  s3_bucket        = aws_s3_bucket.lambda_deployment_packages.bucket
+  s3_key           = aws_s3_bucket_object.default_function.key
   function_name    = "stripe-webhook-gateway-lambda-${var.subdomain}"
   role             = aws_iam_role.stripe_payment_gateway_lambda_iam.arn
   handler          = "index.webhookHandler"
-  source_code_hash = filebase64sha256("payment-gateway-stripe-lambda.zip")
+  source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
   runtime          = "nodejs8.10"
   timeout          = 900
 
@@ -442,6 +603,13 @@ resource "aws_lambda_function" "stripe_webhook_gateway_lambda" {
   depends_on = [null_resource.payment_gateway_stripe_wait]
 
   tags = local.default_tags
+
+  lifecycle {
+    ignore_changes = [
+      "source_code_hash",
+      "last_modified"
+    ]
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
