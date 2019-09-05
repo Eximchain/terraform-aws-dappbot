@@ -19,6 +19,8 @@ provider "null" {
 }
 
 locals {
+  stage = var.root_domain == "dapp.bot" ? var.subdomain == "api" ? "prod" : "staging" : "dev"
+
   s3_bucket_arn_pattern = "arn:aws:s3:::exim-dappbot-*"
   default_tags = {
     Application = "DappBot"
@@ -1175,4 +1177,85 @@ resource "aws_lambda_permission" "sns_payment_events_invoke_event_listener_lambd
   principal     = "sns.amazonaws.com"
 
   source_arn = aws_sns_topic.payment_events.arn
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# CD PIPELINE NOTIFICATION TOPIC
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_sns_topic" "cd_pipeline_notifications" {
+  name = "cd-pipeline-notifications-${var.subdomain}"
+}
+
+resource "aws_sns_topic_policy" "cloudwatch_events_publish_cd_pipeline_notifications" {
+  arn    = aws_sns_topic.cd_pipeline_notifications.arn
+  policy = data.aws_iam_policy_document.cloudwatch_events_publish_cd_pipeline_notifications.json
+}
+
+data "aws_iam_policy_document" "cloudwatch_events_publish_cd_pipeline_notifications" {
+  statement {
+    effect  = "Allow"
+    actions = ["SNS:Publish"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["events.amazonaws.com"]
+    }
+
+    resources = [aws_sns_topic.cd_pipeline_notifications.arn]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# CD PIPELINE NOTIFICATION EVENTS
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_cloudwatch_event_rule" "cd_pipeline_complete" {
+  name        = "cd-pipeline-complete-${var.subdomain}"
+  description = "Triggers on CD pipeline run completion"
+
+  event_pattern = <<PATTERN
+{
+  "source": [
+    "aws.codepipeline"
+  ],
+  "detail-type": [
+    "CodePipeline Pipeline Execution State Change"
+  ],
+  "detail": {
+    "state": [
+      "SUCCEEDED",
+      "FAILED"
+    ],
+    "pipeline": [
+      "${module.dappbot_api_lambda_pipeline.pipeline_name}",
+      "${module.dappbot_manager_lambda_pipeline.pipeline_name}",
+      "${module.dappbot_event_listener_lambda_pipeline.pipeline_name}",
+      "${module.payment_gateway_stripe_lambda_pipeline.pipeline_name}",
+      "${module.dapphub_website.pipeline_name}",
+      "${module.dappbot_manager.pipeline_name}"
+    ]
+  }
+}
+PATTERN
+}
+
+resource "aws_cloudwatch_event_target" "cd_pipeline_complete" {
+  rule      = aws_cloudwatch_event_rule.cd_pipeline_complete.name
+  target_id = "SendToSNS"
+  arn       = aws_sns_topic.cd_pipeline_notifications.arn
+
+  input_transformer {
+    input_paths = {
+      pipeline = "$.detail.pipeline"
+      state    = "$.detail.state"
+    }
+
+    input_template = <<EOF
+{
+  "subject": "Pipeline Run Complete",
+  "stage": "${local.stage}",
+  "pipeline": <pipeline>,
+  "state": <state>
+}
+EOF
+  }
 }
