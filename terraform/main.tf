@@ -145,7 +145,7 @@ resource "aws_lambda_function" "dappbot_api_lambda" {
   role             = aws_iam_role.dappbot_private_api_iam.arn
   handler          = "index.privateHandler"
   source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
-  runtime          = "nodejs8.10"
+  runtime          = "nodejs10.x"
   timeout          = 10
 
   environment {
@@ -190,7 +190,7 @@ resource "aws_lambda_function" "dapphub_view_lambda" {
   role             = aws_iam_role.dappbot_public_api_iam.arn
   handler          = "index.publicHandler"
   source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
-  runtime          = "nodejs8.10"
+  runtime          = "nodejs10.x"
   timeout          = 5
 
   environment {
@@ -229,7 +229,7 @@ resource "aws_lambda_function" "dappbot_auth_api_lambda" {
   role             = aws_iam_role.dappbot_auth_api_iam.arn
   handler          = "index.authHandler"
   source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
-  runtime          = "nodejs8.10"
+  runtime          = "nodejs10.x"
   timeout          = 5
 
   environment {
@@ -291,7 +291,7 @@ resource "aws_lambda_function" "dappbot_manager_lambda" {
   role             = aws_iam_role.dappbot_manager_iam.arn
   handler          = "index.handler"
   source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
-  runtime          = "nodejs8.10"
+  runtime          = "nodejs10.x"
   timeout          = 60
 
   environment {
@@ -359,7 +359,7 @@ resource "aws_lambda_function" "dappbot_manager_deadletter_lambda" {
   role             = aws_iam_role.dappbot_deadletter_iam.arn
   handler          = "index.deadLetterHandler"
   source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
-  runtime          = "nodejs8.10"
+  runtime          = "nodejs10.x"
   timeout          = 30
 
   environment {
@@ -445,7 +445,7 @@ resource "aws_lambda_function" "dappbot_event_listener_lambda" {
   role             = aws_iam_role.dappbot_event_listener_iam.arn
   handler          = "index.handler"
   source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
-  runtime          = "nodejs8.10"
+  runtime          = "nodejs10.x"
   timeout          = 900
   memory_size      = 256
 
@@ -522,7 +522,7 @@ resource "aws_lambda_function" "stripe_signup_gateway_lambda" {
   role             = aws_iam_role.stripe_payment_gateway_lambda_iam.arn
   handler          = "index.signupHandler"
   source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
-  runtime          = "nodejs8.10"
+  runtime          = "nodejs10.x"
   timeout          = 900
 
   environment {
@@ -555,7 +555,7 @@ resource "aws_lambda_function" "stripe_management_gateway_lambda" {
   role             = aws_iam_role.stripe_payment_gateway_lambda_iam.arn
   handler          = "index.managementHandler"
   source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
-  runtime          = "nodejs8.10"
+  runtime          = "nodejs10.x"
   timeout          = 900
 
   environment {
@@ -589,7 +589,7 @@ resource "aws_lambda_function" "stripe_webhook_gateway_lambda" {
   role             = aws_iam_role.stripe_payment_gateway_lambda_iam.arn
   handler          = "index.webhookHandler"
   source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
-  runtime          = "nodejs8.10"
+  runtime          = "nodejs10.x"
   timeout          = 900
 
   environment {
