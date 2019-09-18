@@ -44,6 +44,20 @@ data "aws_iam_policy_document" "lambda_assume_role" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# ASSUME ROLE COGNITO POLICY DOCUMENT
+# ---------------------------------------------------------------------------------------------------------------------
+data "aws_iam_policy_document" "cognito_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["cognito-idp.amazonaws.com"]
+    }
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # DYNAMODB DAPP TABLE READ/WRITE ACCESS
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "dynamodb_dapp_table_read_write" {
@@ -280,6 +294,79 @@ data "aws_iam_policy_document" "cognito_update_user_attributes" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# COGNITO ALLOW MANAGE SOFTWARE TOKEN
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "cognito_manage_software_token" {
+  name = "cognito-allow-manage-software-token-${var.subdomain}"
+
+  policy = data.aws_iam_policy_document.cognito_manage_software_token.json
+}
+
+data "aws_iam_policy_document" "cognito_manage_software_token" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "cognito-idp:AssociateSoftwareToken",
+      "cognito-idp:VerifySoftwareToken"
+    ]
+    resources = [aws_cognito_user_pool.registered_users.arn]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# COGNITO ALLOW SET MFA PREFERENCE
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "cognito_set_mfa_preference" {
+  name = "cognito-allow-set-mfa-preference-${var.subdomain}"
+
+  policy = data.aws_iam_policy_document.cognito_set_mfa_preference.json
+}
+
+data "aws_iam_policy_document" "cognito_set_mfa_preference" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "cognito-idp:AdminSetUserMFAPreference"
+    ]
+    resources = [aws_cognito_user_pool.registered_users.arn]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# COGNITO ALLOW REFRESH
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "cognito_refresh" {
+  name = "cognito-allow-refresh-${var.subdomain}"
+
+  policy = data.aws_iam_policy_document.cognito_refresh.json
+}
+
+data "aws_iam_policy_document" "cognito_refresh" {
+  version = "2012-10-17"
+
+  statement {
+    sid = "1"
+
+    effect = "Allow"
+
+    actions = [
+      "cognito-idp:InitiateAuth"
+    ]
+    resources = [aws_cognito_user_pool.registered_users.arn]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # COGNITO ALLOW AUTH
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_policy" "cognito_allow_auth" {
@@ -302,9 +389,7 @@ data "aws_iam_policy_document" "cognito_allow_auth" {
       "cognito-idp:AdminInitiateAuth",
       "cognito-idp:AdminResetUserPassword",
       "cognito-idp:AdminRespondToAuthChallenge",
-      "cognito-idp:AssociateSoftwareToken",
-      "cognito-idp:GetUser",
-      "cognito-idp:VerifySoftwareToken"
+      "cognito-idp:GetUser"
     ]
 
     resources = [aws_cognito_user_pool.registered_users.arn]
@@ -731,6 +816,26 @@ data "aws_iam_policy_document" "sns_publish_payment_events" {
     actions   = ["sns:Publish"]
 
     resources = [aws_sns_topic.payment_events.arn]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# SNS PUBLISH ALL
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_policy" "sns_publish_all" {
+  name   = "sns-publish-all-${var.subdomain}"
+  policy = "${data.aws_iam_policy_document.sns_publish_all.json}"
+}
+
+data "aws_iam_policy_document" "sns_publish_all" {
+  statement {
+    actions = [
+      "sns:Publish",
+    ]
+
+    resources = [
+      "*",
+    ]
   }
 }
 

@@ -51,6 +51,7 @@ locals {
   base_lambda_uri                      = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions"
   dappbot_lambda_uri                   = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_api_lambda.arn}/invocations"
   dappbot_auth_lambda_uri              = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_auth_api_lambda.arn}/invocations"
+  dappbot_config_lambda_uri            = "${local.base_lambda_uri}/${aws_lambda_function.dappbot_config_api_lambda.arn}/invocations"
   dapphub_lambda_uri                   = "${local.base_lambda_uri}/${aws_lambda_function.dapphub_view_lambda.arn}/invocations"
   stripe_management_gateway_lambda_uri = "${local.base_lambda_uri}/${aws_lambda_function.stripe_management_gateway_lambda.arn}/invocations"
   stripe_webhook_gateway_lambda_uri    = "${local.base_lambda_uri}/${aws_lambda_function.stripe_webhook_gateway_lambda.arn}/invocations"
@@ -131,7 +132,8 @@ module "dappbot_api_lambda_pipeline" {
   deployment_target_lambdas = [
     aws_lambda_function.dappbot_api_lambda.function_name,
     aws_lambda_function.dapphub_view_lambda.function_name,
-    aws_lambda_function.dappbot_auth_api_lambda.function_name
+    aws_lambda_function.dappbot_auth_api_lambda.function_name,
+    aws_lambda_function.dappbot_config_api_lambda.function_name
   ]
 
   aws_region            = var.aws_region
@@ -240,6 +242,46 @@ resource "aws_lambda_function" "dappbot_auth_api_lambda" {
   }
 
   depends_on = [null_resource.dappbot_auth_api_wait]
+
+  tags = local.default_tags
+
+  lifecycle {
+    ignore_changes = [
+      "source_code_hash",
+      "last_modified"
+    ]
+  }
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# DAPPBOT CONFIG LAMBDA FUNCTION
+# ---------------------------------------------------------------------------------------------------------------------
+# Wait ensures that the role is fully created when Lambda tries to assume it.
+resource "null_resource" "dappbot_config_api_wait" {
+  provisioner "local-exec" {
+    command = "sleep 10"
+  }
+  depends_on = [aws_iam_role.dappbot_config_api_iam]
+}
+
+resource "aws_lambda_function" "dappbot_config_api_lambda" {
+  s3_bucket        = aws_s3_bucket.lambda_deployment_packages.bucket
+  s3_key           = aws_s3_bucket_object.default_function.key
+  function_name    = "dappbot-config-lambda-${var.subdomain}"
+  role             = aws_iam_role.dappbot_config_api_iam.arn
+  handler          = "index.configHandler"
+  source_code_hash = filebase64sha256(aws_s3_bucket_object.default_function.source)
+  runtime          = "nodejs10.x"
+  timeout          = 10
+
+  environment {
+    variables = {
+      COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
+      COGNITO_CLIENT_ID = aws_cognito_user_pool_client.api_client.id
+    }
+  }
+
+  depends_on = [null_resource.dappbot_config_api_wait]
 
   tags = local.default_tags
 
@@ -864,6 +906,8 @@ locals {
 resource "aws_cognito_user_pool" "registered_users" {
   name = "dappbot-users-${var.subdomain}"
 
+  mfa_configuration = "OPTIONAL"
+
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
 
@@ -888,6 +932,18 @@ resource "aws_cognito_user_pool" "registered_users" {
 
   verification_message_template {
     default_email_option = "CONFIRM_WITH_LINK"
+  }
+
+  sms_configuration {
+    external_id    = "cognito-sms-${var.subdomain}"
+    sns_caller_arn = aws_iam_role.cognito_sms.arn
+  }
+
+  // Workaround for the inability to enable software token MFA with an attribute
+  // Should be removed and replaced with such an attribute when it exists
+  // Note this will NOT work on an already existing user pool
+  provisioner "local-exec" {
+    command = "aws cognito-idp set-user-pool-mfa-config --user-pool-id ${self.id} --software-token-mfa-configuration Enabled=true --mfa-configuration ${self.mfa_configuration}"
   }
 
   // Legacy Proof of Concept
@@ -1000,7 +1056,7 @@ resource "aws_cognito_user_pool_client" "api_client" {
   user_pool_id = aws_cognito_user_pool.registered_users.id
 
   allowed_oauth_flows  = ["code", "implicit"]
-  allowed_oauth_scopes = ["email", "openid", "profile"]
+  allowed_oauth_scopes = ["email", "openid", "profile", "aws.cognito.signin.user.admin"]
 
   allowed_oauth_flows_user_pool_client = true
 
