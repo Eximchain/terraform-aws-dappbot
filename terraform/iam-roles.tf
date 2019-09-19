@@ -80,6 +80,44 @@ resource "aws_iam_role_policy_attachment" "dappbot_auth_api_cognito" {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
+# DAPPBOT CONFIG API ROLE
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_role" "dappbot_config_api_iam" {
+  name = "dappbot-api-config-iam-${var.subdomain}"
+
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
+
+  tags = local.default_tags
+}
+
+# Cloudwatch (Logs)
+resource "aws_iam_role_policy_attachment" "dappbot_config_api_cloudwatch" {
+  role       = aws_iam_role.dappbot_config_api_iam.id
+  policy_arn = aws_iam_policy.lambda_allow_write_cloudwatch_logs.arn
+}
+
+# Cognito
+resource "aws_iam_role_policy_attachment" "dappbot_config_api_cognito_update_user_attributes" {
+  role       = aws_iam_role.dappbot_config_api_iam.id
+  policy_arn = aws_iam_policy.cognito_update_user_attributes.arn
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_config_api_cognito_manage_software_token" {
+  role       = aws_iam_role.dappbot_config_api_iam.id
+  policy_arn = aws_iam_policy.cognito_manage_software_token.arn
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_config_api_cognito_set_mfa_preference" {
+  role       = aws_iam_role.dappbot_config_api_iam.id
+  policy_arn = aws_iam_policy.cognito_set_mfa_preference.arn
+}
+
+resource "aws_iam_role_policy_attachment" "dappbot_config_api_cognito_refresh" {
+  role       = aws_iam_role.dappbot_config_api_iam.id
+  policy_arn = aws_iam_policy.cognito_refresh.arn
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
 # DAPPBOT MANAGER IAM ROLE
 # ---------------------------------------------------------------------------------------------------------------------
 resource "aws_iam_role" "dappbot_manager_iam" {
@@ -347,4 +385,17 @@ resource "aws_iam_role_policy_attachment" "dappbot_codepipeline_codebuild" {
 resource "aws_iam_role_policy_attachment" "dappbot_codepipeline_ecr" {
   role       = aws_iam_role.dappbot_codepipeline_iam.id
   policy_arn = aws_iam_policy.ecr_read_only.arn
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# COGNITO SMS IAM ROLE
+# ---------------------------------------------------------------------------------------------------------------------
+resource "aws_iam_role" "cognito_sms" {
+  name               = "cognito-send-sms-${var.subdomain}"
+  assume_role_policy = "${data.aws_iam_policy_document.cognito_assume_role.json}"
+}
+
+resource "aws_iam_role_policy_attachment" "cognito_sms" {
+  role       = "${aws_iam_role.cognito_sms.name}"
+  policy_arn = "${aws_iam_policy.sns_publish_all.arn}"
 }

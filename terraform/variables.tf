@@ -57,6 +57,31 @@ variable "dappbot_manager_branch" {
   default     = "master"
 }
 
+variable "lambda_default_branch" {
+  description = "Branch to use for Lambda repositories if no override is specified"
+  default     = "master"
+}
+
+variable "dappbot_api_lambda_branch_override" {
+  description = "An override for the dappbot-api-lambda repository branch. Will use Lambda default if left blank."
+  default     = ""
+}
+
+variable "dappbot_manager_lambda_branch_override" {
+  description = "An override for the dappbot-manager-lambda repository branch. Will use Lambda default if left blank."
+  default     = ""
+}
+
+variable "dappbot_event_listener_lambda_branch_override" {
+  description = "An override for the dappbot-event-listener-lambda repository branch. Will use Lambda default if left blank."
+  default     = ""
+}
+
+variable "payment_gateway_stripe_lambda_branch_override" {
+  description = "An override for the payment-gateway-stripe-lambda repository branch. Will use Lambda default if left blank."
+  default     = ""
+}
+
 variable "create_wildcard_cert" {
   description = "Create a new wildcard subdomain certificate.  Requires 30 minutes or more for validation.  If false, expects a validated cert to already exist for '*.subdomain.root_domain'."
   default     = false

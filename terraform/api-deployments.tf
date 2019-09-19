@@ -37,3 +37,18 @@ resource "aws_api_gateway_deployment" "dapp_api_deploy_v1" {
   rest_api_id = aws_api_gateway_rest_api.dapp_api.id
   stage_name  = "v1"
 }
+
+// v1 stage second deployment
+// Add configure-mfa endpoint
+resource "aws_api_gateway_deployment" "dapp_api_deploy_v1_configure_mfa" {
+  depends_on = [
+    aws_api_gateway_integration.dappbot_auth_configure_mfa_any,
+    aws_api_gateway_method.dappbot_auth_configure_mfa_any,
+
+    aws_api_gateway_integration.dappbot_auth_configure_mfa_cors,
+    aws_api_gateway_method.dappbot_auth_configure_mfa_cors,
+  ]
+
+  rest_api_id = aws_api_gateway_rest_api.dapp_api.id
+  stage_name  = "v1"
+}
