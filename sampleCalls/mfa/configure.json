@@ -1,0 +1,4 @@
+{
+    "mfaEnabled": true,
+    "preferredMfa": "SOFTWARE_TOKEN_MFA"
+}
