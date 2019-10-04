@@ -117,6 +117,11 @@ resource "aws_iam_role_policy_attachment" "dappbot_config_api_cognito_refresh" {
   policy_arn = aws_iam_policy.cognito_refresh.arn
 }
 
+resource "aws_iam_role_policy_attachment" "dappbot_config_api_cognito_admin_get_user" {
+  role       = aws_iam_role.dappbot_config_api_iam.id
+  policy_arn = aws_iam_policy.cognito_admin_get_user.arn
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # DAPPBOT MANAGER IAM ROLE
 # ---------------------------------------------------------------------------------------------------------------------
