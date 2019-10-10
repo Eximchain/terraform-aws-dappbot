@@ -158,6 +158,7 @@ terraform {
         DNS_ROOT          = local.created_dns_root
         SQS_QUEUE         = aws_sqs_queue.dappbot.id
         DAPPHUB_DNS       = local.dapphub_dns
+        SEGMENT_WRITE_KEY = var.segment_nodejs_write_key
       }
     }
 
@@ -238,6 +239,7 @@ terraform {
       variables = {
         COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
         COGNITO_CLIENT_ID = aws_cognito_user_pool_client.api_client.id
+        SEGMENT_WRITE_KEY = var.segment_nodejs_write_key
       }
     }
 
@@ -352,6 +354,7 @@ terraform {
         SENDGRID_API_KEY         = var.sendgrid_key
         SERVICES_LAMBDA_FUNCTION = aws_lambda_function.dappbot_event_listener_lambda.function_name
         GITHUB_TOKEN             = var.service_github_token
+        SEGMENT_WRITE_KEY        = var.segment_nodejs_write_key
       }
     }
 
@@ -420,6 +423,7 @@ terraform {
         SENDGRID_API_KEY         = var.sendgrid_key
         SERVICES_LAMBDA_FUNCTION = aws_lambda_function.dappbot_event_listener_lambda.function_name
         GITHUB_TOKEN             = var.service_github_token
+        SEGMENT_WRITE_KEY        = var.segment_nodejs_write_key
       }
     }
 
@@ -507,6 +511,7 @@ terraform {
         SENDGRID_API_KEY                = var.sendgrid_key
         GITHUB_TOKEN                    = var.service_github_token
         PAYMENT_LAPSED_GRACE_PERIOD_HRS = var.payment_lapsed_grace_period_hours
+        SEGMENT_WRITE_KEY               = var.segment_nodejs_write_key
       }
     }
 
@@ -572,6 +577,7 @@ terraform {
         COGNITO_USER_POOL       = aws_cognito_user_pool.registered_users.id
         STRIPE_API_KEY          = var.stripe_api_key
         EXIMCHAIN_ACCOUNTS_ONLY = var.eximchain_accounts_only
+        SEGMENT_WRITE_KEY       = var.segment_nodejs_write_key
       }
     }
 
@@ -606,6 +612,7 @@ terraform {
         COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
         SNS_TOPIC_ARN     = aws_sns_topic.payment_events.arn
         STRIPE_API_KEY    = var.stripe_api_key
+        SEGMENT_WRITE_KEY = var.segment_nodejs_write_key
       }
     }
 
@@ -641,6 +648,7 @@ terraform {
         STRIPE_WEBHOOK_SECRET = var.stripe_webhook_secret
         SENDGRID_API_KEY      = var.sendgrid_key
         MANAGER_SPA_DNS       = local.dappbot_manager_dns
+        SEGMENT_WRITE_KEY = var.segment_nodejs_write_key
       }
     }
 
