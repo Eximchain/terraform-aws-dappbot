@@ -141,7 +141,12 @@ variable "eximchain_accounts_only" {
   default     = true
 }
 
-variable "segment_write_key" {
-  description = "Publishable key to send analytics calls to Segment.io.  Must be set in order to get usage analytics."
+variable "segment_nodejs_write_key" {
+  description = "Publishable key to send analytics calls to Segment.io from Lambdas.  Must be set in order to get usage analytics."
+  default     = ""
+}
+
+variable "segment_browser_write_key" {
+  description = "Publishable key to send analytics calls to Segment.io from the browser.  Must be set in order to get usage analytics."
   default     = ""
 }
