@@ -152,12 +152,12 @@ terraform {
 
     environment {
       variables = {
-        COGNITO_USER_POOL        = aws_cognito_user_pool.registered_users.id
-        COGNITO_CLIENT_ID        = aws_cognito_user_pool_client.api_client.id
-        DDB_TABLE                = aws_dynamodb_table.dapp_table.id
-        DNS_ROOT                 = local.created_dns_root
-        SQS_QUEUE                = aws_sqs_queue.dappbot.id
-        DAPPHUB_DNS              = local.dapphub_dns
+        COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
+        COGNITO_CLIENT_ID = aws_cognito_user_pool_client.api_client.id
+        DDB_TABLE         = aws_dynamodb_table.dapp_table.id
+        DNS_ROOT          = local.created_dns_root
+        SQS_QUEUE         = aws_sqs_queue.dappbot.id
+        DAPPHUB_DNS       = local.dapphub_dns
       }
     }
 
@@ -236,8 +236,8 @@ terraform {
 
     environment {
       variables = {
-        COGNITO_USER_POOL        = aws_cognito_user_pool.registered_users.id
-        COGNITO_CLIENT_ID        = aws_cognito_user_pool_client.api_client.id
+        COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
+        COGNITO_CLIENT_ID = aws_cognito_user_pool_client.api_client.id
       }
     }
 
@@ -605,10 +605,10 @@ terraform {
 
     environment {
       variables = {
-        DAPP_TABLE               = aws_dynamodb_table.dapp_table.id
-        COGNITO_USER_POOL        = aws_cognito_user_pool.registered_users.id
-        SNS_TOPIC_ARN            = aws_sns_topic.payment_events.arn
-        STRIPE_API_KEY           = var.stripe_api_key
+        DAPP_TABLE        = aws_dynamodb_table.dapp_table.id
+        COGNITO_USER_POOL = aws_cognito_user_pool.registered_users.id
+        SNS_TOPIC_ARN     = aws_sns_topic.payment_events.arn
+        STRIPE_API_KEY    = var.stripe_api_key
       }
     }
 
@@ -639,11 +639,11 @@ terraform {
 
     environment {
       variables = {
-        SNS_TOPIC_ARN            = aws_sns_topic.payment_events.arn
-        STRIPE_API_KEY           = var.stripe_api_key
-        STRIPE_WEBHOOK_SECRET    = var.stripe_webhook_secret
-        SENDGRID_API_KEY         = var.sendgrid_key
-        MANAGER_SPA_DNS          = local.dappbot_manager_dns
+        SNS_TOPIC_ARN         = aws_sns_topic.payment_events.arn
+        STRIPE_API_KEY        = var.stripe_api_key
+        STRIPE_WEBHOOK_SECRET = var.stripe_webhook_secret
+        SENDGRID_API_KEY      = var.sendgrid_key
+        MANAGER_SPA_DNS       = local.dappbot_manager_dns
       }
     }
 
