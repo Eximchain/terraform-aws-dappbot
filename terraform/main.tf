@@ -512,6 +512,7 @@ terraform {
         GITHUB_TOKEN                    = var.service_github_token
         PAYMENT_LAPSED_GRACE_PERIOD_HRS = var.payment_lapsed_grace_period_hours
         SEGMENT_NODEJS_WRITE_KEY        = var.segment_nodejs_write_key
+        API_URL                         = "https://${local.api_domain}"
       }
     }
 
