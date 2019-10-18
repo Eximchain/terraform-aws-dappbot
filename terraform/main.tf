@@ -507,6 +507,8 @@ terraform {
         SENDGRID_API_KEY                = var.sendgrid_key
         GITHUB_TOKEN                    = var.service_github_token
         PAYMENT_LAPSED_GRACE_PERIOD_HRS = var.payment_lapsed_grace_period_hours
+        SEGMENT_NODEJS_WRITE_KEY        = var.segment_nodejs_write_key
+        API_URL                         = "https://${local.api_domain}"
       }
     }
 
@@ -569,9 +571,10 @@ terraform {
 
     environment {
       variables = {
-        COGNITO_USER_POOL       = aws_cognito_user_pool.registered_users.id
-        STRIPE_API_KEY          = var.stripe_api_key
-        EXIMCHAIN_ACCOUNTS_ONLY = var.eximchain_accounts_only
+        COGNITO_USER_POOL        = aws_cognito_user_pool.registered_users.id
+        STRIPE_API_KEY           = var.stripe_api_key
+        EXIMCHAIN_ACCOUNTS_ONLY  = var.eximchain_accounts_only
+        SEGMENT_NODEJS_WRITE_KEY = var.segment_nodejs_write_key
       }
     }
 
@@ -1112,8 +1115,9 @@ terraform {
     force_destroy_buckets = true
 
     env = {
-      REACT_APP_DAPPBOT_URL = "https://${local.api_domain}"
-      REACT_APP_WEB3_URL    = "https://gamma-tx-executor-us-east.eximchain-dev.com"
+      REACT_APP_DAPPBOT_URL               = "https://${local.api_domain}"
+      REACT_APP_WEB3_URL                  = "https://gamma-tx-executor-us-east.eximchain-dev.com"
+      REACT_APP_SEGMENT_BROWSER_WRITE_KEY = var.segment_browser_write_key
     }
   }
 
@@ -1146,6 +1150,7 @@ terraform {
       REACT_APP_USER_POOL_CLIENT_ID        = aws_cognito_user_pool_client.api_client.id
       REACT_APP_MAILCHIMP_URL              = "https://eximchain.us20.list-manage.com/subscribe/post?u=bcabb5ebaaec9e5f833f9d760&id=0bdb65877c"
       REACT_APP_MAILCHIMP_AUDENCE_ID       = "b_bcabb5ebaaec9e5f833f9d760_0bdb65877c"
+      REACT_APP_SEGMENT_BROWSER_WRITE_KEY  = var.segment_browser_write_key
     }
   }
 
