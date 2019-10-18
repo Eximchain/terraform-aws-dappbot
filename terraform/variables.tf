@@ -140,3 +140,13 @@ variable "eximchain_accounts_only" {
   description = "If true, only `@eximchain.com` emails will be permitted to sign up for accounts."
   default     = true
 }
+
+variable "segment_nodejs_write_key" {
+  description = "Publishable key to send analytics calls to Segment.io from Lambdas.  Must be set in order to get usage analytics."
+  default     = ""
+}
+
+variable "segment_browser_write_key" {
+  description = "Publishable key to send analytics calls to Segment.io from the browser.  Must be set in order to get usage analytics."
+  default     = ""
+}
