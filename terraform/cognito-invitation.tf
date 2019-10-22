@@ -3,11 +3,11 @@ locals {
   email_path = "${local.build_path}/email.html"
   login_link = "${local.dappbot_manager_dns}/login"
   invitation_sms = "Welcome to DappBot! Sign in at ${local.login_link} with {username} and {####}"
-  invitation_email_subject = "Welcome to your FREE Trial: DappBot Trial Password"
+  invitation_email_subject = "Welcome to DappBot: Temporary Password"
   invitation_email_args = {
-    title = "DappBot Trial | Temporary Password"
-    shortSummary = "Your DappBot Temporary Password is {####}"
-    header = "Welcome to your DappBot trial!"
+    title = "DappBot | Temporary Password"
+    shortSummary = "{####} is your DappBot Temporary Password"
+    header = "Welcome to DappBot!"
     topParagraphs = [
       "Starting today, you’re going to experience first hand how incredibly simple and easy it is to create high-quality smart contract applications and instantly deploy them to 165 hosts around the world &mdash; all in 5 minutes.",
     ]
@@ -15,7 +15,7 @@ locals {
     codeName = "temporary password"
     bottomParagraphs = [
       "You can now <a href=\"${local.login_link}\" style=\"box-sizing: border-box; color: #3869D4; font-family: 'Helvetica Neue', Helvetica, sans-serif\">login</a> with your username, {username}, and the password above.  You'll be prompted to set a different password.  If you're having any trouble getting your contract and dapp deployed, try looking at our <a href=\"https://dappbot.drift.help/category/getting-started/\" style=\"box-sizing: border-box; color: #3869D4; font-family: 'Helvetica Neue', Helvetica, sans-serif\">DappBot help articles</a>.",
-      "We will email you a survey before the end of your trial, and if you fill it out, the trial will be extended!  Especially during your trial period, please reach out to us at support@eximchain.com if you require any support or assistance with Dappbot.",
+      "Please reach out to us at support@eximchain.com if you require any support or assistance with Dappbot.",
     ]
   }
   invitation_email_html = templatefile(local.email_path, local.invitation_email_args)
